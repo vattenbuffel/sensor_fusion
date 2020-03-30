@@ -7,31 +7,37 @@ b = [0;0];
 f = @(x) A*x + b;
 mu = [10;0];
 sigma = [0.2 0; 0 8];
+N = 10;
 
 [calc_mu, calc_sigma] = affineGaussianTransform(mu, sigma, A, b);
 calc_level_curve = sigmaEllipse2D(calc_mu, calc_sigma, 3, 256);
 
-[app_mu, app_sigma, app_ys] = approxGaussianTransform(mu, sigma, f);
+[app_mu, app_sigma, app_ys] = approxGaussianTransform(mu, sigma, f, N);
 app_level_curve = sigmaEllipse2D(app_mu, app_sigma, 3, 256);
 
 
-plot(app_ys(1, :), app_ys(2, :))
+plot(app_ys(1, :), app_ys(2, :), '*')
 hold on
 plot(calc_level_curve(1,:), calc_level_curve(2,:))
+plot(calc_mu(1), calc_mu(2), '*')
+legend('xy_{random}', 'calculated 3\sigma level curve', '\mu_{calculated}')
+
+figure
+plot(app_ys(1, :), app_ys(2, :), '*')
+hold on
 plot(app_level_curve(1,:), app_level_curve(2,:))
+plot(app_mu(1), app_mu(2), '*')
+legend('xy_{random}', 'approximated 3\sigma level curve', '\mu_{approximated}')
 
 
 
-%Vad menar dom plotta mean?
-% Both the plots fit well, they fit better the higher N is because of the
-% law of big numbers.
 
 
 
 %% 1 b
 clc; clear; close all;
 
-N = 10000000;
+N = 10^6;
 
 f = @(x) [vecnorm(x); atan2(x(2, :), x(1, :)) ];
 mu = [10;0];
@@ -41,9 +47,11 @@ sigma = [0.2 0; 0 8];
 app_level_curve = sigmaEllipse2D(app_mu, app_sigma, 3, 256);
 
 
-plot(app_ys(1, :), app_ys(2, :))
+plot(app_ys(1, :), app_ys(2, :), '*')
 hold on
 plot(app_level_curve(1,:), app_level_curve(2,:))
+plot(app_mu(1), app_mu(2), '*')
+legend('xy_{random}', 'approximated 3\sigma level curve', '\mu_{approximated}')
 
 
 %% 2 a
@@ -58,26 +66,133 @@ sigma_kvit = 0.5^2;
 sigma_Else = 1^2;
 
 [mu_haf, sigma_haf] = jointGaussian(mu_haf, sigma_haf, sigma_Anna);
-haf_level_curve = sigmaEllipse2D(mu_haf, sigma_haf, 3, 256);
+haf_level_curve = sigmaEllipse2D(mu_haf, sigma_haf, 3, 256*4);
 
 [mu_kvit, sigma_kvit] = jointGaussian(mu_kvit, sigma_kvit, sigma_Else);
-kvit_level_curve = sigmaEllipse2D(mu_kvit, sigma_kvit, 3, 256);
+kvit_level_curve = sigmaEllipse2D(mu_kvit, sigma_kvit, 3, 256*4);
 
 
 plot(kvit_level_curve(1,:), kvit_level_curve(2,:))
 hold on
 plot(haf_level_curve(1,:), haf_level_curve(2,:))
 
-legend('Haf', 'Kvit')
-
-
-%Dependency is bigger in kvit
+legend('Kvit', 'Haf')
+title('3\sigma level curve of f(x,y)')
 
 
 
+% 2b
+mu_haf = 1.1; 
+sigma_haf = 0.5^2;
+sigma_Anna = 0.2^2;
+
+mu_kvit = 1; 
+sigma_kvit = 0.5^2;
+sigma_Else = 1^2;
+
+[mu_kvit, sigma_kvit] = posteriorGaussian(mu_kvit, sigma_kvit, 2, sigma_Else);
+[mu_haf, sigma_haf] = posteriorGaussian(mu_haf, sigma_haf, 1, sigma_Anna);
+
+
+figure
+x = [-1:.01:3];
+y = normpdf(x,mu_kvit, sqrt(sigma_kvit));
+plot(x,y)
+hold on
+%axis([-0.4 2.8 0 2]);
+legend('kvit')
+title('p(x|y)')
+
+figure
+x = [-1:.001:3];
+y = normpdf(x, mu_haf, sqrt(sigma_haf) );
+plot(x,y)
+hold on
+axis([0 2 0 2.2]);
+legend('haf')
+title('p(x|y)')
+
+
+
+%% 2 c
+% The biggest mu  is in kvit, but there's a lot more variance there. Even 0
+% m of snow isn't that unlikely in kvit. If he wants to maximise the
+% chances of having any snow then haf is the place to go
+
+%% 3 a
+clc; clear; close all;
+
+x_mmse = 0.1 + 0.9;
+x = [-30:.01:30];
+y = 0.1*normpdf(x, 1, sqrt(0.5))+0.9*normpdf(x, 1, sqrt(9));
+plot(x,y)
+hold on
+plot(0.98, 0, '-o')
+plot(x_mmse, 0, '-*')
+legend('p_a(\theta | y)', '\theta_{map}', '\theta_{mmse}' )
+title('p_a(\theta | y)')
+
+%% 3 b
+clc; clear; close all;
+
+figure
+x_mmse = 0.49*5 + 0.51*-5;
+x = [-12:.01:12];
+y = 0.49*normpdf(x, 5, sqrt(2))+0.51*normpdf(x, -5, sqrt(2));
+plot(x,y)
+hold on
+plot(-4.95, 0, '-o')
+plot(x_mmse, 0, '-*')
+legend('p_b(\theta | y)', '\theta_{map}', '\theta_{mmse}' )
+title('p_b(\theta | y)')
+
+
+%% 3 c
+clc; clear; close all;
+
+figure
+x_mmse = 0.4 + 1.2;
+x = [-4:.01:7];
+y = 0.4*normpdf(x, 1, sqrt(2))+0.6*normpdf(x, 2, 1);
+plot(x,y)
+hold on
+plot(1.83, 0, '-o')
+plot(x_mmse, 0, '-*')
+legend('p_c(\theta | y)', '\theta_{map}', '\theta_{mmse}' )
+title('p_c(\theta | y)')
 
 
 %%
+
+function [mu, sigma2] = posteriorGaussian(mu_x, sigma2_x, y, sigma2_r)
+%posteriorGaussian performs a single scalar measurement update with a
+%measurement model which is simply "y = x + noise".
+%
+%Input
+%   MU_P            The mean of the (Gaussian) prior density.
+%   SIGMA2_P        The variance of the (Gaussian) prior density.
+%   SIGMA2_R        The variance of the measurement noise.
+%   Y               The given measurement.
+%
+%Output
+%   MU              The mean of the (Gaussian) posterior distribution
+%   SIGMA2          The variance of the (Gaussian) posterior distribution
+
+%Your code here
+% Firstly f(x|y) is proportional to p(y|x)p(x) = N(y; x, sigma_r) * N(x; mu_x, sigma_x) which is proportional to e^(-(y-x)^2/(2*sigma_r^2)) * e^(-(x-mu_x)^2/(2*sigma_x^2))
+% This can be the exponent can be solved using cos: ax^2+bx+c = a(a+d)-e
+
+denominator = 2*sigma2_x * sigma2_r;
+
+c = denominator\(y*y.'*sigma2_x + mu_x*mu_x.'*sigma2_r)*1; 
+b = denominator\(2*y*sigma2_x + 2*mu_x*sigma2_r)*-1;
+a = denominator\(2*(sigma2_x + sigma2_r)*1);
+d = b/(a);
+
+mu = -d;
+sigma2 = a^-1;
+end
+
 function [ xy ] = sigmaEllipse2D( mu, Sigma, level, npoints )
 %SIGMAELLIPSE2D generates x,y-points which lie on the ellipse describing
 % a sigma level in the Gaussian density defined by mean and covariance.
@@ -164,7 +279,6 @@ mu_y = A*mu_x + b;
 Sigma_y =  A*Sigma_x*A.';
     
 end
-
 
 function [mu_y, Sigma_y, y_s] = approxGaussianTransform(mu_x, Sigma_x, f, N)
 %approxGaussianTransform takes a Gaussian density and a transformation 
