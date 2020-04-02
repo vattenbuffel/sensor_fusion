@@ -1,63 +1,104 @@
 clc; clear; close all;
 
 
+% Tolerance
+
 tol = 1e-5;
 
 % General parameters
+N = 10;
 n = 1;
+T = 1;
+
+% Motion Parameters
+A = 1;
+Q = T*.5^2;
 
 % Measurement Parameters
 H = 1;
-R = .5^2;
+R = 1^2;
 
 % Prior
-xPrior  = mvnrnd(zeros(n,1)', diag(ones(n)))';
-V       = rand(n,n);
-PPrior  = V*2*diag(rand(n,1))*V';
+xPrior  = 0;
+PPrior  = 2^2;
 
-% Genereate measurement
-y = mvnrnd(H*xPrior, H*PPrior*H' + R);
+% genereate measurement sequence
+measuremetnSequence = 10*ones(1,N);
 
-% Perform update
-[xUpd, PUpd] = linearUpdate(xPrior, PPrior, y, H, R);
-[xUpd_ref, PUpd_ref] = reference.linearUpdate(xPrior, PPrior, y, H, R);
+% Filter
+[stateSequence, covarianceSequence] = kalmanFilter(measuremetnSequence, xPrior, PPrior, A, Q, H, R);
 
-% Plot results
+% plot results
 figure(1); clf; hold on;
-x = linspace(xUpd - 4*sqrt(PPrior), xUpd + 4*sqrt(PPrior),100);
-plot(x, normpdf(x,xUpd, sqrt(PUpd)));
-plot(x, normpdf(x,xPrior, sqrt(PPrior)));
-plot(y,0,'sk', 'LineWidth', 2, 'MarkerSize', 10);
+plot([1:N], measuremetnSequence, '*r');
+
+plot([0:N], [xPrior stateSequence], 'b');
+plot([0:N], [xPrior stateSequence] + 3*sqrt([PPrior covarianceSequence(:)']), '--b');
+plot([0:N], [xPrior stateSequence] - 3*sqrt([PPrior covarianceSequence(:)']), '--b');
+
 title('Your solution')
-xlabel('x');
-ylabel('p(x)')
-legend('Updated density', 'Prior density', 'Measurement');
-
-figure(2); clf; hold on;
-x = linspace(xUpd_ref - 4*sqrt(PPrior), xUpd_ref + 4*sqrt(PPrior),100);
-plot(x, normpdf(x, xUpd_ref, sqrt(PUpd_ref)));
-plot(x, normpdf(x, xPrior, sqrt(PPrior)));
-plot(y,0,'sk', 'LineWidth', 2, 'MarkerSize', 10);
-title('Reference solution')
-xlabel('x');
-ylabel('p(x)')
-legend('Updated density', 'Prior density', 'Measurement');
+xlabel('k');
+ylabel('x');
+legend('measurements', 'state estimate', '+3-sigma level', '-3-sigma level','Location','southeast');
 
 
-% Assert resutls
-assert(isequal(size(xPrior),[n 1]), 'Dimension of prior and predicted mean need to be the same.');
-assert(isequal(size(PPrior),[n n]), 'Dimension of prior and predicted covariance need to be the same.');
-assert(all(abs(xUpd-xUpd_ref)<tol), 'Updated mean is not within tolerance.');
-assert(all(all(abs(PUpd-PUpd_ref)<tol)), 'Updated covarinace is not within tolerance.');
-
-
-[~, p] = chol(PUpd);
-assert(p == 0 || trace((PUpd)) ~= 0, 'Posterior covariance is not positive semi definite covarinace matrix');
-
+assert(isequal(size(stateSequence),[n, N]), 'Dimension of predicted state sequence should be [n x N].');
+assert(isequal(size(covarianceSequence),[n,n,N]), 'Dimension of sequence estimate error covariance should be [n x n x N].');
+%assert(all(abs(stateSequence-stateSequence_ref)<tol), 'predicted state sequence is not within tolerance.');
+%assert(all(all(abs(covarianceSequence-covarianceSequence_ref)<tol)), 'predicted error covariance is not within tolerance.');
+stateSequence(:,1)
 
 
 
 %%
+function [X, P] = kalmanFilter(Y, x_0, P_0, A, Q, H, R)
+%KALMANFILTER Filters measurements sequence Y using a Kalman filter. 
+%
+%Input:
+%   Y           [m x N] Measurement sequence
+%   x_0         [n x 1] Prior mean
+%   P_0         [n x n] Prior covariance
+%   A           [n x n] State transition matrix
+%   Q           [n x n] Process noise covariance
+%   H           [m x n] Measurement model matrix
+%   R           [m x m] Measurement noise covariance
+%
+%Output:
+%   x           [n x N] predicted state vector sequence
+%   P           [n x n x N] Filter error convariance
+%
+
+% Parameters
+N = size(Y,2);
+
+n = length(x_0);
+m = size(Y,1);
+
+% Data allocation
+x = zeros(n,N);
+P = zeros(n,n,N);
+
+
+% My code
+%%%%%%%%%%%%%%%%%
+% Estimate one step ahead in time.
+[x, p] = linearPrediction(x_0, P_0, A, Q);
+% Update the estimated position with the measurement
+[x, p] = linearUpdate(x, p, Y(:, 1), H, R);      
+X = x;
+P(:,:,1) = p;
+    
+for i = 2:size(Y,2)
+    % Estimate one step ahead in time.
+    [x, p] = linearPrediction(X(:, end), P(:,:, i-1), A, Q);
+    % Update the estimated position with the measurement
+    [x, p] = linearUpdate(x, p, Y(:, i), H, R);           
+    X = [X x];
+    P(:,:,i) = p;
+end
+%%%%%%%%%%%%%%%%%
+   
+end
 
 function [x, P] = linearUpdate(x, P, y, H, R)
 %LINEARPREDICTION calculates mean and covariance of predicted state
@@ -137,6 +178,7 @@ Y = H*X + mvnrnd(zeros(size(R,1),1), R, size(X,2)).';
 Y = Y(:,2:end);
 %%%%%%%%%%%%%%%%
 end
+
 function X = genLinearStateSequence(x_0, P_0, A, Q, N)
 %GENLINEARSTATESEQUENCE generates an N-long sequence of states using a 
 %    Gaussian prior and a linear Gaussian process model
@@ -155,7 +197,7 @@ function X = genLinearStateSequence(x_0, P_0, A, Q, N)
 % Your code here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % The first position is distributed normally with mean x_0 and sigma P_0
-X = mvnrnd(x_0, P_0).'
+X = mvnrnd(x_0, P_0).';
 
 
 for i = 1:N
