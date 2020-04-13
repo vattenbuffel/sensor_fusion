@@ -3,10 +3,11 @@ clc; clear; close all;
 
 Q = 1.5;
 R = 2.5;
-x0 = 100; %?
+x0 = 10;
+P0 = 2;
 N = 20;
 
-x = genLinearStateSequence(x0, 2.6, 1, Q, N);
+x = genLinearStateSequence(x0, P0, 1, Q, N);
 y = genLinearMeasurementSequence(x, 1, R);
 
 %a
@@ -14,9 +15,10 @@ plot(x)
 hold on
 plot(y)
 legend('x', 'y')
+title('a')
 
 %b
-[filtered_y, cov] = kalmanFilter(y, x0, 2.6, 1, Q, 1, R);
+[filtered_y, cov] = kalmanFilter(y, x0, P0, 1, Q, 1, R);
 figure
 plot(x(2:end))
 hold on
@@ -25,50 +27,62 @@ plot(filtered_y)
 plot([x(2:end).'] + 3*sqrt([cov(:)]), '--b')
 plot([x(2:end).'] - 3*sqrt([cov(:)]), '--b')
 legend('x', 'y', 'y_{filtered}', '3 \sigma', '-3 \sigma')
+title('b')
+
 
 figure
-xs = 90:110;
+xs = 2:20;
 ys = normpdf(xs, filtered_y(1), sqrt(cov(:,:,1)));
 plot(xs, ys)
+hold on
+plot(x(2), 0, 'o')
+title('b')
+legend('P(x)', 'x_{true}')
 
 figure
-xs = 90:110;
 ys = normpdf(xs, filtered_y(end/2), sqrt(cov(:,:,end/2)));
 plot(xs, ys)
+hold on
+plot(x((end+1)/2), 0, 'o')
+title('b')
+legend('P(x)', 'x_{true}')
 
 figure
-xs = 90:110;
 ys = normpdf(xs, filtered_y(end), sqrt(cov(:,:,end)));
 plot(xs, ys)
+hold on
+plot(x(end-1), 0, 'o')
+title('b')
+legend('P(x)', 'x_{true}')
 
 %c
-%plot predicted densities?
+
 figure
-xs = 90:110;
 ys = normpdf(xs, filtered_y(10), sqrt(cov(:,:,10)));
 plot(xs, ys)
+title('c')
 
 hold on
-xs = 90:110;
-ys = normpdf(xs, x(11), sqrt(cov(:,:,11)));
+ys = normpdf(xs, x(11), sqrt(1^2*cov(:,:,10)+Q)); % 1 here reflects the A-matrix
 plot(xs, ys)
+title('c')
 
-xs = 90:110;
 ys = normpdf(xs, filtered_y(11), sqrt(cov(:,:,11)));
 plot(xs, ys)
 legend('p(x_{k-1}|y_{1:k-1})', 'p(x_{k}|y_{1:k-1})', 'p(x_{k}|y_{1:k})') %Filtered, predicted, filtered
-
+title('c')
 %% 1d
 clc; clear; close all;
 
 Q = 1.5;
 R = 2.5;
-x0 = 100; %?
+x0 = 2;
+P0 = 6;
 N = 1000;
 
-x = genLinearStateSequence(x0, 2.6, 1, Q, N);
+x = genLinearStateSequence(x0, P0, 1, Q, N);
 y = genLinearMeasurementSequence(x, 1, R);
-[filtered_y, cov, Vk] = kalmanFilter(y, x0, 2.6, 1, Q, 1, R);
+[filtered_y, cov, Vk] = kalmanFilter(y, x0, P0, 1, Q, 1, R);
 x = x(2:end);
 
 estimated_mean = sum(filtered_y)/size(filtered_y,2);
@@ -78,10 +92,11 @@ histo = histogram(estimation_error, 'Normalization', 'pdf'); % Normal distribute
 hold on
 posterior = normpdf(-10:10, 0, sqrt(cov(end)));
 plot(-10:10, posterior)
-legend('histogram', 'P(0, \surd(P_{K|K}))')
+legend('histogram', 'P(0, \surd{P_{K|K})}')
 
+figure
 Vk_mean = sum(Vk)/size(Vk, 2);
-%Vk_auto = autocorr(Vk)  WTF ÄR AUTOCORRELATION
+autocorr(Vk)
 
 
 
@@ -89,15 +104,16 @@ Vk_mean = sum(Vk)/size(Vk, 2);
 clc; clear; close all;
 Q = 1.5;
 R = 2.5;
-x0 = 100; %?
+x0 = 2;
+P0 = 6;
 N = 10;
 
 x = genLinearStateSequence(x0, 2.6, 1, Q, N);
 y = genLinearMeasurementSequence(x, 1, R);
-[filtered_y, cov, Vk] = kalmanFilter(y, x0, 2.6, 1, Q, 1, R);
+[filtered_y, cov, Vk] = kalmanFilter(y, x0, P0, 1, Q, 1, R);
 x = x(2:end);
 
-[filtered_y_wrong_prior, cov, Vk] = kalmanFilter(y, 10, 2.6, 1, Q, 1, R);
+[filtered_y_wrong_prior, cov, Vk] = kalmanFilter(y, 10, P0, 1, Q, 1, R);
 
 plot(x)
 hold on
@@ -109,12 +125,11 @@ legend('x', 'filtered y', 'filtered y with wrong x_0')
 
 %% 2
 clc; clear; close all;
-% TA REDA PÅ VARFÖR FÖRSTA STATET AV X INTE PREDICTAS
 Q = [0 0; 0 1.5];
 R = 2;
-x0 = [1; 3]; %?
+x0 = [1; 3]; 
 P0 = 4*eye(2);
-N = 10;
+N = 100;
 T = 0.01;
 
 A = [1 T; 0 1];
@@ -125,20 +140,23 @@ y = genLinearMeasurementSequence(x, H, R);
 [filtered_y, cov, Vk] = kalmanFilter(y, x0, P0, A, Q, H, R);
 x = x(:, 2:end);
 
-
+%a
 %plot pos
 plot(x(1,:), '-o')
 hold on
 plot(y(1,:), '-o')
 legend('Predicted pos', 'measured pos')
+title('a')
 % very low motion noise but failry high measurement noise so it makes sense
 
 %plot vel
 figure
-plot(x(1,:), '-o')
+plot(x(2,:), '-o')
 legend('Predicted vel')
+title('a')
 % makes sense, it's pretty much constant but with a small addative motion
 % noise
+
 
 %b
 %plot pos
@@ -147,12 +165,14 @@ plot(x(1,:))
 hold on
 plot(y)
 plot(filtered_y(1,:))
+title('b')
 
 fitt_matlab = cov(1,1,:);
 fitt_matlab(:);% ta bort det här
 plot([x(1,:).'] + 3*sqrt([fitt_matlab(:)]), '--b')
 plot([x(1,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
 legend('Predicted pos', 'measured pos', 'filtered measure pos', '3 \sigma', '-3 \sigma')
+title('b')
 
 %plot vel
 figure
@@ -165,9 +185,9 @@ fitt_matlab(:);% ta bort det här
 plot([x(2,:).'] + 3*sqrt([fitt_matlab(:)]), '--b')
 plot([x(2,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
 legend('Predicted vel', 'filtered predicted vel', '3 \sigma', '-3 \sigma')
+title('b')
 
 % c
-close all
 Q = @(t) [0 0; 0 t];
 [filtered_y_1, cov1, Vk] = kalmanFilter(y, x0, P0, A, Q(0.1), H, R);
 [filtered_y_10, cov10, Vk] = kalmanFilter(y, x0, P0, A, Q(1), H, R);
@@ -177,6 +197,7 @@ plot_skalman(x,y,filtered_y_1, cov1, 'i')
 plot_skalman(x,y,filtered_y_10, cov1, 'ii')
 plot_skalman(x,y,filtered_y_100, cov1, 'iii')
 plot_skalman(x,y,filtered_y_15, cov1, 'iv')
+title('c')
 
 function plot_skalman(x, y, y_filtered ,cov, plot_title)
 figure
