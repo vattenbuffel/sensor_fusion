@@ -31,7 +31,7 @@ title('b')
 
 
 figure
-xs = 2:20;
+xs = 2:0.1:20;
 ys = normpdf(xs, filtered_y(1), sqrt(cov(:,:,1)));
 plot(xs, ys)
 hold on
@@ -63,13 +63,15 @@ plot(xs, ys)
 title('c')
 
 hold on
-ys = normpdf(xs, x(11), sqrt(1^2*cov(:,:,10)+Q)); % 1 here reflects the A-matrix
+ys = normpdf(xs, x(12), sqrt(1^2*cov(:,:,10)+Q)); % 1 here reflects the A-matrix
 plot(xs, ys)
 title('c')
 
 ys = normpdf(xs, filtered_y(11), sqrt(cov(:,:,11)));
 plot(xs, ys)
-legend('p(x_{k-1}|y_{1:k-1})', 'p(x_{k}|y_{1:k-1})', 'p(x_{k}|y_{1:k})') %Filtered, predicted, filtered
+xline(y(10), 'b')
+xline(x(12), 'g')
+legend('p(x_{k-1}|y_{1:k-1})', 'p(x_{k}|y_{1:k-1})', 'p(x_{k}|y_{1:k})', 'y(k)', 'x(k)') %Filtered, predicted, filtered
 title('c')
 %% 1d
 clc; clear; close all;
@@ -142,16 +144,16 @@ x = x(:, 2:end);
 
 %a
 %plot pos
-plot(x(1,:), '-o')
+plot(x(1,:))
 hold on
-plot(y(1,:), '-o')
+plot(y(1,:))
 legend('Predicted pos', 'measured pos')
 title('a')
 % very low motion noise but failry high measurement noise so it makes sense
 
 %plot vel
 figure
-plot(x(2,:), '-o')
+plot(x(2,:))
 legend('Predicted vel')
 title('a')
 % makes sense, it's pretty much constant but with a small addative motion
@@ -187,6 +189,8 @@ plot([x(2,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
 legend('Predicted vel', 'filtered predicted vel', '3 \sigma', '-3 \sigma')
 title('b')
 
+%%
+close all
 % c
 Q = @(t) [0 0; 0 t];
 [filtered_y_1, cov1, Vk] = kalmanFilter(y, x0, P0, A, Q(0.1), H, R);
@@ -194,36 +198,36 @@ Q = @(t) [0 0; 0 t];
 [filtered_y_100, cov100, Vk] = kalmanFilter(y, x0, P0, A, Q(10), H, R);
 [filtered_y_15, cov15, Vk] = kalmanFilter(y, x0, P0, A, Q(1.5), H, R);
 plot_skalman(x,y,filtered_y_1, cov1, 'i')
-plot_skalman(x,y,filtered_y_10, cov1, 'ii')
-plot_skalman(x,y,filtered_y_100, cov1, 'iii')
-plot_skalman(x,y,filtered_y_15, cov1, 'iv')
-title('c')
+plot_skalman(x,y,filtered_y_10, cov10, 'ii')
+plot_skalman(x,y,filtered_y_100, cov100, 'iii')
+plot_skalman(x,y,filtered_y_15, cov15, 'iv')
+
 
 function plot_skalman(x, y, y_filtered ,cov, plot_title)
-figure
-plot(x(1,:))
+figure(1)
+%plot(x(1,:))
 hold on
-plot(y)
+%plot(y)
 plot(y_filtered(1,:))
 
 fitt_matlab = cov(1,1,:);
 fitt_matlab(:);% ta bort det här
-plot([x(1,:).'] + 3*sqrt([fitt_matlab(:)]), '--b')
-plot([x(1,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
-legend('Predicted pos', 'measured pos', 'filtered measure pos', '3 \sigma', '-3 \sigma')
+%plot([x(1,:).'] + 3*sqrt([fitt_matlab(:)]), '--b')
+%plot([x(1,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
+%legend('Predicted pos', 'filtered measure pos', '3 \sigma', '-3 \sigma')
 title(plot_title)
 
 %plot vel
-figure
+figure(2)
 plot(x(2,:))
 hold on
 plot(y_filtered(2,:))
 
 fitt_matlab = cov(2,2,:);
 fitt_matlab(:);% ta bort det här
-plot([x(2,:).'] + 3*sqrt([fitt_matlab(:)]), '--b')
-plot([x(2,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
-legend('Predicted vel', 'filtered predicted vel', '3 \sigma', '-3 \sigma')
+%plot([x(2,:).'] + 3*sqrt([fitt_matlab(:)]), '--b')
+%plot([x(2,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
+%legend('Predicted vel', 'filtered predicted vel', '3 \sigma', '-3 \sigma')
 title(plot_title)
 
 end
