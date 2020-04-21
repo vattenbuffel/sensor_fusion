@@ -24,8 +24,8 @@ plot(x(2:end))
 hold on
 plot(y)
 plot(filtered_y)
-plot([x(2:end).'] + 3*sqrt([cov(:)]), '--b')
-plot([x(2:end).'] - 3*sqrt([cov(:)]), '--b')
+plot([filtered_y.'] + 3*sqrt([cov(:)]), '--b')
+plot([filtered_y.'] - 3*sqrt([cov(:)]), '--b')
 legend('x', 'y', 'y_{filtered}', '3 \sigma', '-3 \sigma')
 title('b')
 
@@ -56,21 +56,22 @@ title('b')
 legend('P(x)', 'x_{true}')
 
 %c
-
+close all
 figure
 ys = normpdf(xs, filtered_y(10), sqrt(cov(:,:,10)));
 plot(xs, ys)
 title('c')
 
 hold on
-ys = normpdf(xs, x(12), sqrt(1^2*cov(:,:,10)+Q)); % 1 here reflects the A-matrix
+[new_x, new_cov] =  linearPrediction(filtered_y(10), cov(:,:,10), 1, Q);
+ys = normpdf(xs, new_x, new_cov); 
 plot(xs, ys)
 title('c')
 
 ys = normpdf(xs, filtered_y(11), sqrt(cov(:,:,11)));
 plot(xs, ys)
-xline(y(10), 'b')
-xline(x(12), 'g')
+xline(y(11), 'b');
+xline(x(12), 'black');
 legend('p(x_{k-1}|y_{1:k-1})', 'p(x_{k}|y_{1:k-1})', 'p(x_{k}|y_{1:k})', 'y(k)', 'x(k)') %Filtered, predicted, filtered
 title('c')
 %% 1d
@@ -171,10 +172,11 @@ title('b')
 
 fitt_matlab = cov(1,1,:);
 fitt_matlab(:);% ta bort det här
-plot([x(1,:).'] + 3*sqrt([fitt_matlab(:)]), '--b')
-plot([x(1,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
-legend('Predicted pos', 'measured pos', 'filtered measure pos', '3 \sigma', '-3 \sigma')
+plot(filtered_y(1,:).' + 3*sqrt([fitt_matlab(:)]), '--b')
+plot(filtered_y(1,:).' - 3*sqrt([fitt_matlab(:)]), '--b')
+legend('pos', 'measured pos', 'filtered measure pos', '3 \sigma', '-3 \sigma')
 title('b')
+
 
 %plot vel
 figure
@@ -184,9 +186,9 @@ plot(filtered_y(2,:))
 
 fitt_matlab = cov(2,2,:);
 fitt_matlab(:);% ta bort det här
-plot([x(2,:).'] + 3*sqrt([fitt_matlab(:)]), '--b')
-plot([x(2,:).'] - 3*sqrt([fitt_matlab(:)]), '--b')
-legend('Predicted vel', 'filtered predicted vel', '3 \sigma', '-3 \sigma')
+plot(filtered_y(2,:).' + 3*sqrt([fitt_matlab(:)]), '--b')
+plot(filtered_y(2,:).' - 3*sqrt([fitt_matlab(:)]), '--b')
+legend('vel', 'filtered  vel', '3 \sigma', '-3 \sigma')
 title('b')
 
 %%
@@ -197,6 +199,28 @@ Q = @(t) [0 0; 0 t];
 [filtered_y_10, cov10, Vk] = kalmanFilter(y, x0, P0, A, Q(1), H, R);
 [filtered_y_100, cov100, Vk] = kalmanFilter(y, x0, P0, A, Q(10), H, R);
 [filtered_y_15, cov15, Vk] = kalmanFilter(y, x0, P0, A, Q(1.5), H, R);
+
+figure
+plot(x(1,:).')
+hold on
+plot(filtered_y_1(1,:).')
+plot(filtered_y_10(1,:).')
+plot(filtered_y_100(1,:).')
+plot(filtered_y_15(1,:).')
+legend('x', 'i', 'ii', 'iii', 'iv')
+title('vel')
+
+figure
+plot(x(2,:).')
+hold on
+plot(filtered_y_1(2,:).')
+plot(filtered_y_10(2,:).')
+plot(filtered_y_100(2,:).')
+plot(filtered_y_15(2,:).')
+legend('x', 'i', 'ii', 'iii', 'iv')
+title('pos')
+
+%%
 plot_skalman(x,y,filtered_y_1, cov1, 'i')
 plot_skalman(x,y,filtered_y_10, cov10, 'ii')
 plot_skalman(x,y,filtered_y_100, cov100, 'iii')
@@ -232,7 +256,7 @@ title(plot_title)
 
 end
 
-%%
+
 function [X, P, Vks] = kalmanFilter(Y, x_0, P_0, A, Q, H, R)
 %KALMANFILTER Filters measurements sequence Y using a Kalman filter. 
 %
@@ -302,12 +326,12 @@ function [x, P, Vk] = linearUpdate(x, P, y, H, R)
 
 % Your code here
 %%%%%%%%%%%%%%%%
-Vk = y - H*x;
-Sk = H*P*H.' + R;
-Kk = P*H.'*inv(Sk);
+Vk = y - H*x; %Calculate the innovation
+Sk = H*P*H.' + R; %Predict the covariance in yk
+Kk = P*H.'*inv(Sk); %Calculate the Kalman gain, how much we trust the new measurement
 
-x = x + Kk*Vk;
-P = P - Kk*Sk*Kk.';
+x = x + Kk*Vk; %Estimate the new state
+P = P - Kk*Sk*Kk.'; %Estimate the error covariance
 
 %%%%%%%%%%%%%%%%
 

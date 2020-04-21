@@ -65,12 +65,12 @@ function [x, P] = linearUpdate(x, P, y, H, R)
 
 % Your code here
 %%%%%%%%%%%%%%%%
-Vk = y - H*x;
-Sk = H*P*H.' + R;
-Kk = P*H.'*inv(Sk);
+Vk = y - H*x; %Calculate the innovation
+Sk = H*P*H.' + R; %Predict the covariance in yk
+Kk = P*H.'*inv(Sk); %Calculate the Kalman gain, how much we trust the new measurement
 
-x = x + Kk*Vk;
-P = P - Kk*Sk*Kk.';
+x = x + Kk*Vk; %Estimate the new state
+P = P - Kk*Sk*Kk.'; %Estimate the error covariance
 
 %%%%%%%%%%%%%%%%
 
