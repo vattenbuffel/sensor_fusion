@@ -13,13 +13,16 @@ x2_hat = [120; -20];
 Sigma_2 = [25 0
            0 100];
  
+% Take random samples
 n = 10000;
 x1 = mvnrnd(x1_hat, Sigma_1, n).';
 x2 = mvnrnd(x2_hat, Sigma_2, n).';
  
+% Measure the samples
 [hx1, Hx1] = dualBearingMeasurement(x1, s1, s2);
 [hx2, Hx2] = dualBearingMeasurement(x2, s1, s2);
  
+% Add noise to the samples
 y1 = [hx1(1,:) + mvnrnd(0, R, n).'
       hx1(2,:) + mvnrnd(0, R, n).'];
     
@@ -27,6 +30,7 @@ y2 = [hx2(1,:) + mvnrnd(0, R, n).'
       hx2(2,:) + mvnrnd(0, R, n).'];
  
 % a
+% Calculate the "true" mean and cov
 y1_mean_a = (sum(y1.')/n).';
 y2_mean_a = (sum(y2.')/n).';
 y1_diff = y1-kron(ones(1, n), y1_mean_a);
@@ -93,7 +97,7 @@ y1_ckf_level_curve = sigmaEllipse2D(y1_mean_b1_ckf, S1_b1_ckf, 3, 256);
 plot(y1_ckf_level_curve(1,:), y1_ckf_level_curve(2,:))
 plot(y1_mean_b1_ckf(1), y1_mean_b1_ckf(2), '*') 
 legend('y', 'ckf-cov', 'ckf-mean')
-title('y1-ekf')
+title('y1-ckf')
  
 
 figure
@@ -186,7 +190,8 @@ Q1(3,3) = 1;
 Q1(5,5) = pi/180;
 Q2 = Q1;
 
-% case 1
+
+% a
 X = genNonLinearStateSequence(x0, P0, f, Q1, n);
 Y = genNonLinearMeasurementSequence(X, h, R1);
 
@@ -199,44 +204,363 @@ X = X(:, 2:end);
 
 [meas_x,meas_y] = convert_measurement_to_position(Y(1, :), Y(2, :), S1, S2);
 
-plot(meas_x, meas_y, 'o')
+%EKF
+%plot(meas_x, 'green')
 hold on
-plot(X(1,:), X(2,:), 'o')
-plot(xf_ekf(1,:), xf_ekf(2,:), 'o')
-for i = 1:5:size(xf_ekf,2)
-    [xy] = sigmaEllipse2D( xf_ekf(1:2,i), Pf_ekf(1:2,1:2,i), 3, 256);
-    plot(xy(1,:), xy(2,:)) 
-end
-legend('measured', 'true', 'ekf', 'ekf-Sigma')
-title('Scenario 1')
+plot(X(1,:))
+plot(xf_ekf(1,:))
+cov = Pf_ekf(1,1,:);
+plot(xf_ekf(1,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ekf(1,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_x', 'x_x', 'x_f', '3 \sigma', '-3 \sigma')
+title('Case1 - x pos, ekf')
 
 
 figure
-plot(meas_x, meas_y, 'o')
+%plot(meas_y, 'green')
 hold on
-plot(X(1,:), X(2,:), 'o')
-plot(xf_ukf(1,:), xf_ukf(2,:), 'o')
-for i = 1:5:size(xf_ekf,2)
-    [xy] = sigmaEllipse2D( xf_ukf(1:2,i), Pf_ukf(1:2,1:2,i), 3, 256);
-    plot(xy(1,:), xy(2,:)) 
-end
-legend('measured', 'true', 'ukf', 'ukf-Sigma')
-title('Scenario 1')
+plot(X(2,:))
+plot(xf_ekf(2,:))
+cov = Pf_ekf(2,2,:);
+plot(xf_ekf(2,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ekf(2,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_y', 'x_y', 'y_f', '3 \sigma', '-3 \sigma')
+title('Case1 - y pos , ekf')
+
+
+% CKF
+figure
+%plot(meas_x, 'green')
+hold on
+plot(X(1,:))
+plot(xf_ckf(1,:))
+cov = Pf_ckf(1,1,:);
+plot(xf_ckf(1,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ckf(1,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_x', 'x_x', 'x_f', '3 \sigma', '-3 \sigma')
+title('Case1 - x pos, ckf')
 
 figure
-plot(meas_x, meas_y, 'o')
+%plot(meas_y, 'green')
 hold on
-plot(X(1,:), X(2,:), 'o')
-plot(xf_ckf(1,:), xf_ckf(2,:), 'o')
-for i = 1:5:size(xf_ekf,2)
-    [xy] = sigmaEllipse2D( xf_ckf(1:2,i), Pf_ckf(1:2,1:2,i), 3, 256);
-    plot(xy(1,:), xy(2,:)) 
+plot(X(2,:))
+plot(xf_ckf(2,:))
+cov = Pf_ckf(2,2,:);
+plot(xf_ckf(2,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ckf(2,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_y', 'x_y', 'y_f', '3 \sigma', '-3 \sigma')
+title('Case1 - y pos , ckf')
+
+% UKF
+figure
+%plot(meas_x, 'green')
+hold on
+plot(X(1,:))
+plot(xf_ukf(1,:))
+cov = Pf_ukf(1,1,:);
+plot(xf_ukf(1,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ukf(1,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_x', 'x_x', 'x_f', '3 \sigma', '-3 \sigma')
+title('Case1 - x pos, ukf')
+
+
+figure
+%plot(meas_y, 'green')
+hold on
+plot(X(2,:))
+plot(xf_ukf(2,:))
+cov = Pf_ukf(2,2,:);
+plot(xf_ukf(2,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ukf(2,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_y', 'x_y', 'y_f', '3 \sigma', '-3 \sigma')
+title('Case1 - y pos , ukf')
+
+% b
+X = genNonLinearStateSequence(x0, P0, f, Q2, n);
+Y = genNonLinearMeasurementSequence(X, h, R2);
+
+[xf_ekf, Pf_ekf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q2, h, R2, 'EKF');
+[xf_ukf, Pf_ukf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q2, h, R2, 'UKF');
+[xf_ckf, Pf_ckf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q2, h, R2, 'CKF');
+
+X = X(:, 2:end);
+
+
+[meas_x,meas_y] = convert_measurement_to_position(Y(1, :), Y(2, :), S1, S2);
+
+%EKF
+figure
+%plot(meas_x, 'green')
+hold on
+plot(X(1,:))
+plot(xf_ekf(1,:))
+cov = Pf_ekf(1,1,:);
+plot(xf_ekf(1,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ekf(1,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_x', 'x_x', 'x_f', '3 \sigma', '-3 \sigma')
+title('Case1 - x pos, ekf')
+
+
+figure
+%plot(meas_y, 'green')
+hold on
+plot(X(2,:))
+plot(xf_ekf(2,:))
+cov = Pf_ekf(2,2,:);
+plot(xf_ekf(2,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ekf(2,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_y', 'x_y', 'y_f', '3 \sigma', '-3 \sigma')
+title('Case1 - y pos , ekf')
+
+
+% CKF
+figure
+%plot(meas_x, 'green')
+hold on
+plot(X(1,:))
+plot(xf_ckf(1,:))
+cov = Pf_ckf(1,1,:);
+plot(xf_ckf(1,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ckf(1,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_x', 'x_x', 'x_f', '3 \sigma', '-3 \sigma')
+title('Case1 - x pos, ckf')
+
+figure
+%plot(meas_y, 'green')
+hold on
+plot(X(2,:))
+plot(xf_ckf(2,:))
+cov = Pf_ckf(2,2,:);
+plot(xf_ckf(2,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ckf(2,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_y', 'x_y', 'y_f', '3 \sigma', '-3 \sigma')
+title('Case1 - y pos , ckf')
+
+% UKF
+figure
+%plot(meas_x, 'green')
+hold on
+plot(X(1,:))
+plot(xf_ukf(1,:))
+cov = Pf_ukf(1,1,:);
+plot(xf_ukf(1,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ukf(1,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_x', 'x_x', 'x_f', '3 \sigma', '-3 \sigma')
+title('Case1 - x pos, ukf')
+
+
+figure
+%plot(meas_y, 'green')
+hold on
+plot(X(2,:))
+plot(xf_ukf(2,:))
+cov = Pf_ukf(2,2,:);
+plot(xf_ukf(2,:).' + 3*sqrt([cov(:)]), '--b')
+plot(xf_ukf(2,:).' - 3*sqrt([cov(:)]), '--b')
+legend('y_y', 'x_y', 'y_f', '3 \sigma', '-3 \sigma')
+title('Case1 - y pos , ukf')
+
+% c
+error_ekf = [];
+error_ckf = [];
+error_ukf = [];
+N = 100;
+
+for i = 1 : N
+    [X, Y, xf_ekf, Pf_ekf, xf_ukf, Pf_ukf, xf_ckf, Pf_ckf] = generate_data_and_estimate(x0, P0, f, Q1, R1, n, h);
+    error_ekf = [error_ekf X-xf_ekf];
+    error_ukf = [error_ekf X-xf_ukf];
+    error_ckf = [error_ekf X-xf_ckf];
 end
-legend('measured', 'true', 'ckf', 'ckf-Sigma')
-title('Scenario 1')
+
+figure
+histogram(error_ekf, 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ekf')
+
+figure
+histogram(error_ukf, 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ukf')
+
+figure
+histogram(error_ckf, 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ckf')
+
+error_ekf = [];
+error_ckf = [];
+error_ukf = [];
+N = 100;
+
+for i = 1 : N
+    [X, Y, xf_ekf, Pf_ekf, xf_ukf, Pf_ukf, xf_ckf, Pf_ckf] = generate_data_and_estimate(x0, P0, f, Q2, R2, n, h);
+    error_ekf = [error_ekf X-xf_ekf];
+    error_ukf = [error_ekf X-xf_ukf];
+    error_ckf = [error_ekf X-xf_ckf];
+end
+
+figure
+histogram(error_ekf, 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ekf')
+
+figure
+histogram(error_ukf, 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ukf')
+
+figure
+histogram(error_ckf, 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ckf')
+
+
+%% 3
+clc; close all; clear;
+[X, T] = truce_track();
+
+x0 = zeros(5,1);
+P0 = diag([100, 100, 100 (5*pi/180)^2 (5*pi/180)^2]);
+s1 = [280, -280].';
+s2 = [280, -200].';
+R = (eye(2) * 4*pi/180).^2;
+
+f = @(x)coordinatedTurnMotion(x, T);
+h = @(x)dualBearingMeasurement(x, s1, s2);
+
+
+
+
+% a
+close all; clc
+Q1 = diag([0 0 1 0 pi/180]);
+Q2 = diag([0 0 1 0 pi/180])*10;
+Q3 = diag([0 0 1 0 pi/180])/10;
+Q4 = diag([0 0 1 0 pi/180])*10^3;
+Q5 = diag([0 0 1 0 pi/180])*10^-3;
+Q6 = diag([0 0 1 0 pi/180*10^-3]);
+Q7 = diag([0 0 1*10^-3 0 pi/180]);
+Q8 = diag([0 0 1 0 pi/180*10^3]);
+Q9 = diag([0 0 1*10^3 0 pi/180]);
+Q10 = diag([0 0 0.005 0 pi/180*0.01]);
+
+Q = [Q1 Q2 Q3 Q4 Q5 Q6 Q7 Q8 Q9 Q10];
+
+N = 100;
+
+for i = 1 : size(Q, 2) / size(X,1)
+    error = [];
+    for j = 1 : N
+        Y = genNonLinearMeasurementSequence(X, h, R);
+        [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q(:, 5*(i-1) + 1 : 5*i), h, R, 'CKF');
+        error = X(:,2:end)-xf;
+    end
+    figure
+    histo = histogram(error, 'Normalization', 'pdf');
+    title(['Q = diag([',num2str(diag(Q(:, 5*(i-1) + 1 : 5*i)).'), '])'])
+    %axis([-4000 4000 0 max(histo.Values)])
+end
+
+%% 3b
+clc; clear; close all
+clc; close all; clear;
+[X, T] = truce_track();
+
+x0 = zeros(5,1);
+P0 = diag([100, 100, 100 (5*pi/180)^2 (5*pi/180)^2]);
+s1 = [280, -280].';
+s2 = [280, -200].';
+R = (eye(2) * 4*pi/180).^2;
+
+f = @(x)coordinatedTurnMotion(x, T);
+h = @(x)dualBearingMeasurement(x, s1, s2);
+Y = genNonLinearMeasurementSequence(X, h, R);
+
+Q = diag([0 0 0.1 0 pi/180*0.1]);
+[xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
+plot(X(1,:), X(2,:))
+hold on
+plot(xf(1,:), xf(2,:))
+legend('x', 'xf')
+title('Good filter')
+%plot(convert_measurement_to_position(Y(1,:), Y(2,:), s1, s2), 'o')
+
+
+% 3c
+%figure
+Q = diag([0 0 0.1 0 pi/180*0.1]);
+[xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
+figure
+plot(X(1,:), X(2,:))
+hold on
+plot(xf(1,:), xf(2,:))
+for i = 1:5:size(xf,2)
+   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 1, 256 );
+   plot(xy(1,:), xy(2,:), '--b')
+end
+legend('x', 'xf')
+title('Well tuned')
+
+figure
+Q = diag([0 0 0.000005 0 pi/180*0.000001]);
+[xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
+plot(X(1,:), X(2,:))
+hold on
+plot(xf(1,:), xf(2,:))
+for i = 1:5:size(xf,2)
+   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 1, 256 );
+   plot(xy(1,:), xy(2,:), '--b')
+end
+legend('x', 'xf')
+title('Under tuned')
+
+figure
+Q = diag([0 0 1 0 pi/180]);
+[xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
+plot(X(1,:), X(2,:))
+hold on
+plot(xf(1,:), xf(2,:))
+for i = 1:5:size(xf,2)
+   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 1, 256 );
+   plot(xy(1,:), xy(2,:), '--b')
+end
+legend('x', 'xf')
+title('Over tuned')
+
+% 3d
 
 
 %%
+function [X, T] = truce_track()
+    % True track
+    % Sampling period
+    T = 0.1;
+    % Length of time sequence
+    K = 600;
+    % Allocate memory
+    omega = zeros(1,K+1);
+    % Turn rate
+    omega(200:400) = -pi/201/T;
+    % Initial state
+    x0 = [0 0 20 0 omega(1)]';
+    % Allocate memory
+    X = zeros(length(x0),K+1);
+    X(:,1) = x0;
+    % Create true track
+    for i=2:K+1
+        % Simulate
+        X(:,i) = coordinatedTurnMotion(X(:,i-1), T);
+        % Set turn?rate
+        X(5,i) = omega(i);
+    end
+end
+
+function [X, Y, xf_ekf, Pf_ekf, xf_ukf, Pf_ukf, xf_ckf, Pf_ckf] = generate_data_and_estimate(x0, P0, f, Q, R, n, h)
+X = genNonLinearStateSequence(x0, P0, f, Q, n);
+Y = genNonLinearMeasurementSequence(X, h, R);
+
+[xf_ekf, Pf_ekf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'EKF');
+[xf_ukf, Pf_ukf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'UKF');
+[xf_ckf, Pf_ckf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
+
+X = X(:, 2:end);
+end
+
 function [x,y] = convert_measurement_to_position(angle1, angle2, s1, s2)
 t1 = tan(angle1);
 t2 = tan(angle2);
@@ -396,7 +720,6 @@ function [x, P, S, y_pred] = nonLinKFupdate(x, P, y, h, R, type)
                 [hx,Hx] = h(SP(:, i));
                 y_pred = y_pred + hx*W(i);
             end
-            
             % Estimate x covariance
             Pxy = 0;
             S = 0;
