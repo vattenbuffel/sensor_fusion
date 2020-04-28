@@ -3,7 +3,7 @@ clc; close all; clear;
  
 s1 = [0; 100];
 s2 = [100; 0];
-R = 0.1*pi/180; 
+R = (0.1*pi/180)^2; 
  
 x1_hat = [120; 120]; 
 Sigma_1 = [25 0
@@ -14,7 +14,7 @@ Sigma_2 = [25 0
            0 100];
  
 % Take random samples
-n = 10000;
+n = 10^6;
 x1 = mvnrnd(x1_hat, Sigma_1, n).';
 x2 = mvnrnd(x2_hat, Sigma_2, n).';
  
@@ -42,33 +42,21 @@ S2_a = (y2_diff*y2_diff.')/(n-1);
 meas_fun = @(x) dualBearingMeasurement(x, s1, s2);
  
 % EKF
-[x, P, S1_b1_ekf, y1_mean_b1_ekf] = nonLinKFupdate(x1(:,1), Sigma_1, y1(:,1), meas_fun, R, 'EKF');
-[x, P, S1_b2_ekf, y1_mean_b2_ekf] = nonLinKFupdate(x1(:,end/2), Sigma_1, y1(:,end/2), meas_fun, R, 'EKF');
-[x, P, S1_b3_ekf, y1_mean_b3_ekf] = nonLinKFupdate(x1(:,end), Sigma_1, y1(:,end), meas_fun, R, 'EKF');
+[x, P, S1_b1_ekf, y1_mean_b1_ekf] = nonLinKFupdate(x1_hat, Sigma_1, y1(:,1), meas_fun, R, 'EKF');
+
  
-[x, P, S2_b1_ekf, y2_mean_b1_ekf] = nonLinKFupdate(x2(:,1), Sigma_2, y2(:,1), meas_fun, R, 'EKF');
-[x, P, S2_b2_ekf, y2_mean_b2_ekf] = nonLinKFupdate(x2(:,end/2), Sigma_2, y2(:,end/2), meas_fun, R, 'EKF');
-[x, P, S2_b3_ekf, y2_mean_b3_ekf] = nonLinKFupdate(x2(:,end), Sigma_2, y2(:,end), meas_fun, R, 'EKF');
+[x, P, S2_b1_ekf, y2_mean_b1_ekf] = nonLinKFupdate(x2_hat, Sigma_2, y2(:,1), meas_fun, R, 'EKF');
  
 % UKF
-[x, P, S1_b1_ukf, y1_mean_b1_ukf] = nonLinKFupdate(x1(:,1), Sigma_1, y1(:,1), meas_fun, R, 'UKF');
-[x, P, S1_b2_ukf, y1_mean_b2_ukf] = nonLinKFupdate(x1(:,end/2), Sigma_1, y1(:,end/2), meas_fun, R, 'UKF');
-[x, P, S1_b3_ukf, y1_mean_b3_ukf] = nonLinKFupdate(x1(:,end), Sigma_1, y1(:,end), meas_fun, R, 'UKF');
+[x, P, S1_b1_ukf, y1_mean_b1_ukf] = nonLinKFupdate(x1_hat, Sigma_1, y1(:,1), meas_fun, R, 'UKF');
  
-[x, P, S2_b1_ukf, y2_mean_b1_ukf] = nonLinKFupdate(x2(:,1), Sigma_2, y2(:,1), meas_fun, R, 'UKF');
-[x, P, S2_b2_ukf, y2_mean_b2_ukf] = nonLinKFupdate(x2(:,end/2), Sigma_2, y2(:,end/2), meas_fun, R, 'UKF');
-[x, P, S2_b3_ukf, y2_mean_b3_ukf] = nonLinKFupdate(x2(:,end), Sigma_2, y2(:,end), meas_fun, R, 'UKF');
+[x, P, S2_b1_ukf, y2_mean_b1_ukf] = nonLinKFupdate(x2_hat, Sigma_2, y2(:,1), meas_fun, R, 'UKF');
  
 % CKF
-[x, P, S1_b1_ckf, y1_mean_b1_ckf] = nonLinKFupdate(x1(:,1), Sigma_1, y1(:,1), meas_fun, R, 'CKF');
-[x, P, S1_b2_ckf, y1_mean_b2_ckf] = nonLinKFupdate(x1(:,end/2), Sigma_1, y1(:,end/2), meas_fun, R, 'CKF');
-[x, P, S1_b3_ckf, y1_mean_b3_ckf] = nonLinKFupdate(x1(:,end), Sigma_1, y1(:,end), meas_fun, R, 'CKF');
+[x, P, S1_b1_ckf, y1_mean_b1_ckf] = nonLinKFupdate(x1_hat, Sigma_1, y1(:,1), meas_fun, R, 'CKF');
  
-[x, P, S2_b1_ckf, y2_mean_b1_ckf] = nonLinKFupdate(x2(:,1), Sigma_2, y2(:,1), meas_fun, R, 'CKF');
-[x, P, S2_b2_ckf, y2_mean_b2_ckf] = nonLinKFupdate(x2(:,end/2), Sigma_2, y2(:,end/2), meas_fun, R, 'CKF');
-[x, P, S2_b3_ckf, y2_mean_b3_ckf] = nonLinKFupdate(x2(:,end), Sigma_2, y2(:,end), meas_fun, R, 'CKF');
+[x, P, S2_b1_ckf, y2_mean_b1_ckf] = nonLinKFupdate(x2_hat, Sigma_2, y2(:,1), meas_fun, R, 'CKF');
  
-% WHY ARE THEY ALL THE SAME???
 
 % c
  
@@ -147,6 +135,7 @@ plot(true_level_curve(1,:), true_level_curve(2,:));
 plot(y2_mean_a(1), y2_mean_a(2), '*')
 legend('y', 'true-cov', 'true-mean') %Change true to the right word
 title('y2-true')
+
 
  
 % d
@@ -456,9 +445,13 @@ for i = 1 : size(Q, 2) / size(X,1)
     %axis([-4000 4000 0 max(histo.Values)])
 end
 
+
+% d
+% No it's not possible. In the straight bit we want a 0 omega and we don't
+% want that in the bend
+
 %% 3b
 clc; clear; close all
-clc; close all; clear;
 [X, T] = truce_track();
 
 x0 = zeros(5,1);
@@ -471,7 +464,7 @@ f = @(x)coordinatedTurnMotion(x, T);
 h = @(x)dualBearingMeasurement(x, s1, s2);
 Y = genNonLinearMeasurementSequence(X, h, R);
 
-Q = diag([0 0 0.1 0 pi/180*0.1]);
+Q = diag([0 0 0.001 0 pi/180*0.01]);
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 plot(X(1,:), X(2,:))
 hold on
@@ -483,7 +476,7 @@ title('Good filter')
 
 % 3c
 %figure
-Q = diag([0 0 0.1 0 pi/180*0.1]);
+Q = diag([0 0 0.001 0 pi/180*0.01]);
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 figure
 plot(X(1,:), X(2,:))
