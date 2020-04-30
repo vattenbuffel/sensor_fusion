@@ -1,36 +1,3 @@
-clc; close all; clear all
-
-x0 = [0 0 14 0 0].';
-P0 = diag([100 100 4 (pi/180)^2 (5*pi/180)^2]);
-S1 = [-200; 100];
-S2 = [-200; -100];
-T = 1;
-n = 100;
-f = @(x) coordinatedTurnMotion(x, T);
-h = @(x) dualBearingMeasurement(x, S1, S2);
-
-load("mad.mat")
-
-R1 = (diag([10*pi/180, 0.05*pi/180])).^2;
-
-Q1 = zeros(5);
-Q1(3,3) = 1;
-Q1(5,5) = (pi/180)^2;
-
-[xf_ekf, Pf_ekf, xp, Pp] = nonLinearKalmanFilter(y, x0, P0, f, Q1, h, R1, 'EKF');
-[xf_ukf, Pf_ukf, xp, Pp] = nonLinearKalmanFilter(y, x0, P0, f, Q1, h, R1, 'UKF');
-[xf_ckf, Pf_ckf, xp, Pp] = nonLinearKalmanFilter(y, x0, P0, f, Q1, h, R1, 'CKF');
-
-x = x(:, 2:end);
-
-plot(x(1,:), x(2,:))
-hold on
-%plot_every_fifth(xf_ekf, Pf_ekf, 1)
-plot(xf_ukf(1, :), xf_ukf(2, :), 'g')
-axis equal
-
-
-
 %% 1
 clc; close all; clear;
  
@@ -76,126 +43,88 @@ meas_fun = @(x) dualBearingMeasurement(x, s1, s2);
  
 % EKF
 [x, P, S1_b1_ekf, y1_mean_b1_ekf] = nonLinKFupdate(x1_hat, Sigma_1, y1(:,1), meas_fun, R, 'EKF');
-
- 
 [x, P, S2_b1_ekf, y2_mean_b1_ekf] = nonLinKFupdate(x2_hat, Sigma_2, y2(:,1), meas_fun, R, 'EKF');
  
 % UKF
-[x, P, S1_b1_ukf, y1_mean_b1_ukf] = nonLinKFupdate(x1_hat, Sigma_1, y1(:,1), meas_fun, R, 'UKF');
- 
+[x, P, S1_b1_ukf, y1_mean_b1_ukf] = nonLinKFupdate(x1_hat, Sigma_1, y1(:,1), meas_fun, R, 'UKF'); 
 [x, P, S2_b1_ukf, y2_mean_b1_ukf] = nonLinKFupdate(x2_hat, Sigma_2, y2(:,1), meas_fun, R, 'UKF');
  
 % CKF
-[x, P, S1_b1_ckf, y1_mean_b1_ckf] = nonLinKFupdate(x1_hat, Sigma_1, y1(:,1), meas_fun, R, 'CKF');
- 
+[x, P, S1_b1_ckf, y1_mean_b1_ckf] = nonLinKFupdate(x1_hat, Sigma_1, y1(:,1), meas_fun, R, 'CKF'); 
 [x, P, S2_b1_ckf, y2_mean_b1_ckf] = nonLinKFupdate(x2_hat, Sigma_2, y2(:,1), meas_fun, R, 'CKF');
  
 
 % c
- 
-% y1 first
+% P1 first
 y1_ekf_level_curve = sigmaEllipse2D(y1_mean_b1_ekf, S1_b1_ekf, 3, 256);
 plot(y1(1,:), y1(2,:) , 'o')
 hold on
-plot(y1_ekf_level_curve(1,:), y1_ekf_level_curve(2,:))
+plot(y1_ekf_level_curve(1,:), y1_ekf_level_curve(2,:), 'black')
 plot(y1_mean_b1_ekf(1), y1_mean_b1_ekf(2), '*') 
-legend('y', 'ekf-cov', 'ekf-mean')
-title('y1-ekf')
 
-figure
-plot(y1(1,:), y1(2,:) , 'o')
-hold on
+
 y1_ukf_level_curve = sigmaEllipse2D(y1_mean_b1_ukf, S1_b1_ukf, 3, 256);
-plot(y1_ukf_level_curve(1,:), y1_ukf_level_curve(2,:))
+plot(y1_ukf_level_curve(1,:), y1_ukf_level_curve(2,:), 'm')
 plot(y1_mean_b1_ukf(1), y1_mean_b1_ukf(2), '*') 
-legend('y', 'ukf-cov', 'ukf-mean')
-title('y1-ukf')
 
-figure
-plot(y1(1,:), y1(2,:) , 'o')
-hold on
 y1_ckf_level_curve = sigmaEllipse2D(y1_mean_b1_ckf, S1_b1_ckf, 3, 256);
-plot(y1_ckf_level_curve(1,:), y1_ckf_level_curve(2,:))
+plot(y1_ckf_level_curve(1,:), y1_ckf_level_curve(2,:), 'r')
 plot(y1_mean_b1_ckf(1), y1_mean_b1_ckf(2), '*') 
-legend('y', 'ckf-cov', 'ckf-mean')
-title('y1-ckf')
- 
 
-figure
-plot(y1(1,:), y1(2,:) , 'o')
-hold on
-true_level_curve = sigmaEllipse2D(y1_mean_a, S1_a, 3, n);
-plot(true_level_curve(1,:), true_level_curve(2,:));
+MC_level_curve = sigmaEllipse2D(y1_mean_a, S1_a, 3, n);
+plot(MC_level_curve(1,:), MC_level_curve(2,:), 'g');
 plot(y1_mean_a(1), y1_mean_a(2), '*')
-legend('y', 'true-cov', 'true-mean') %Change true to the right word
-title('y1-true')
+legend('y', 'ekf-3\sigma', 'ekf-mean', 'ukf-3\sigma', 'ukf-mean', 'ckf-3\sigma', 'ckf-mean', 'MC-3\sigma', 'MC-mean')
+title('P_1')
+
  
 
-% y2 second
+% P2 second
 figure
 y2_ekf_level_curve = sigmaEllipse2D(y2_mean_b1_ekf, S2_b1_ekf, 3, 256);
 plot(y2(1,:), y2(2,:) , 'o')
 hold on
-plot(y2_ekf_level_curve(1,:), y2_ekf_level_curve(2,:))
+plot(y2_ekf_level_curve(1,:), y2_ekf_level_curve(2,:), 'black')
 plot(y2_mean_b1_ekf(1), y2_mean_b1_ekf(2), '*') 
-legend('y', 'ekf-cov', 'ekf-mean')
-title('y2-ekf')
  
-figure
-plot(y2(1,:), y2(2,:) , 'o')
-hold on
 y2_ukf_level_curve = sigmaEllipse2D(y2_mean_b1_ukf, S2_b1_ukf, 3, 256);
-plot(y2_ukf_level_curve(1,:), y2_ukf_level_curve(2,:))
+plot(y2_ukf_level_curve(1,:), y2_ukf_level_curve(2,:), 'm')
 plot(y2_mean_b1_ukf(1), y2_mean_b1_ukf(2), '*') 
-legend('y', 'ukf-cov', 'ukf-mean')
-title('y2-ukf')
  
-figure
-plot(y2(1,:), y2(2,:) , 'o')
-hold on
 y2_ckf_level_curve = sigmaEllipse2D(y2_mean_b1_ckf, S2_b1_ckf, 3, 256);
-plot(y2_ckf_level_curve(1,:), y2_ckf_level_curve(2,:))
+plot(y2_ckf_level_curve(1,:), y2_ckf_level_curve(2,:), 'r')
 plot(y2_mean_b1_ckf(1), y2_mean_b1_ckf(2), '*') 
-legend('y', 'ckf-cov', 'ckf-mean')
-title('y2-ekf')
  
- 
-figure
-plot(y2(1,:), y2(2,:) , 'o')
-hold on
-true_level_curve = sigmaEllipse2D(y2_mean_a, S2_a, 3, n);
-plot(true_level_curve(1,:), true_level_curve(2,:));
+MC_level_curve = sigmaEllipse2D(y2_mean_a, S2_a, 3, n);
+plot(MC_level_curve(1,:), MC_level_curve(2,:), 'g');
 plot(y2_mean_a(1), y2_mean_a(2), '*')
-legend('y', 'true-cov', 'true-mean') %Change true to the right word
-title('y2-true')
+legend('y', 'ekf-3\sigma', 'ekf-mean', 'ukf-3\sigma', 'ukf-mean', 'ckf-3\sigma', 'ckf-mean', 'MC-3\sigma', 'MC-mean')
+title('P_2')
 
 
- 
+
 % d
-% What I see is that they all suck
-% None of the method is better than the other. Ekf should suck, no?
+% In the first case they all seem to work alright. In the second case
+% ckf and ukf seem to work alright as well. How ever ekf doesn't work well
+% here. This is because of the positioning of the sensor. This time it's
+% positioned closer to where the measurements happen. This means that a
+% small positional deviation leads to a bigger angle deviation. This in 
+% turn means that the nonlinear function, tan, cannot be approximated as
+% well as linear. It's approximated as linear better in case 1 than in case
+% 2 and as such ekf doesn't work as well.
+% Symmetric around mu
 
 % e 
-% Ye sure they can be approximated with a gaussian. All of the values below
-% are fairly close, maybe not percentage wise but numerically wise they're close.
-
-% y1_mean_a
-% y1_mean_b1_ckf
-% y1_mean_b1_ekf
-% y1_mean_b1_ukf
-% 
-% S1_a
-% S1_b1_ckf
-% S1_b1_ekf
-% S1_b1_ukf
-
-% Although the graphs don't fit well so maybe not after all
+% Yes the approximated mean and cov seem to fit well. Altough in case 2
+% there are some white inside the ckf and ukf cov. This means that there
+% are no sampled values there, so they're either unlikely or impossible
+% while the cov says that they're not too unlikely. Due to the
+% symmetrically around the mean I'd say that it's approximately Gaussian
 
 
 %% 2
 clc; close all; clear;
-%rng(1805352725)
-
+rng(0)
 x0 = [0 0 14 0 0].';
 P0 = diag([100 100 4 (pi/180)^2 (5*pi/180)^2]);
 S1 = [-200; 100];
@@ -228,26 +157,32 @@ X = X(:, 2:end);
 [meas_x,meas_y] = convert_measurement_to_position(Y(1, :), Y(2, :), S1, S2);
 
 %EKF
-plot(X(1,:), X(2,:))
+plot(X(1,1:5:end), X(2,1:5:end), 'or')
 hold on
-plot_every_fifth(xf_ekf, Pf_ekf, 1)
-plot(xf_ekf(1, :), xf_ekf(2, :), 'g')
+plot(xf_ekf(1, 1:5:end), xf_ekf(2, 1:5:end), 'og')
+plot(meas_x(1,1:5:end), meas_y(1,1:5:end), 'o')
+plot_every_fifth(xf_ekf, Pf_ekf, 3)
+legend('x', 'x_f', 'y', '3\sigma')
 title('Case 1, ekf')
 
 % CKF
 figure
-plot(X(1,:), X(2,:))
+plot(X(1,1:5:end), X(2,1:5:end), 'or')
 hold on
-plot_every_fifth(xf_ukf, Pf_ukf, 1)
-plot(xf_ukf(1, :), xf_ukf(2, :), 'g')
+plot(xf_ukf(1, 1:5:end), xf_ukf(2, 1:5:end), 'og')
+plot(meas_x(1,1:5:end), meas_y(1,1:5:end), 'o')
+plot_every_fifth(xf_ukf, Pf_ukf, 3)
+legend('x', 'x_f', 'y', '3\sigma')
 title('Case 1, ukf')
 
 % UKF
 figure
-plot(X(1,:), X(2,:))
+plot(X(1,1:5:end), X(2,1:5:end), 'or')
 hold on
-plot_every_fifth(xf_ckf, Pf_ckf, 1)
-plot(xf_ckf(1, :), xf_ckf(2, :), 'g')
+plot(xf_ckf(1, 1:5:end), xf_ckf(2, 1:5:end), 'og')
+plot(meas_x(1,1:5:end), meas_y(1,1:5:end), 'o')
+plot_every_fifth(xf_ckf, Pf_ckf, 3)
+legend('x', 'x_f', 'y', '3\sigma')
 title('Case 1, ckf')
 
 % b
@@ -264,30 +199,37 @@ X = X(:, 2:end);
 
 %EKF
 figure
-plot(X(1,:), X(2,:))
+plot(X(1,1:5:end), X(2,1:5:end), 'or')
 hold on
-plot_every_fifth(xf_ekf, Pf_ekf, 1)
-plot(xf_ekf(1, :), xf_ekf(2, :), 'g')
-title('Case 2 , ekf')
+plot(xf_ekf(1, 1:5:end), xf_ekf(2, 1:5:end), 'og')
+plot(meas_x(1,1:5:end), meas_y(1,1:5:end), 'o')
+plot_every_fifth(xf_ekf, Pf_ekf, 3)
+legend('x', 'x_f', 'y', '3\sigma')
+title('Case 2, ekf')
 
 % CKF
 figure
-plot(X(1,:), X(2,:))
+plot(X(1,1:5:end), X(2,1:5:end), 'or')
 hold on
-plot_every_fifth(xf_ukf, Pf_ukf, 1)
-plot(xf_ukf(1, :), xf_ukf(2, :), 'g')
-title('Case 2  , ukf')
+plot(xf_ukf(1, 1:5:end), xf_ukf(2, 1:5:end), 'og')
+plot(meas_x(1,1:5:end), meas_y(1,1:5:end), 'o')
+plot_every_fifth(xf_ukf, Pf_ukf, 3)
+legend('x', 'x_f', 'y', '3\sigma')
+title('Case 2, ukf')
 
 % UKF
 figure
-plot(X(1,:), X(2,:))
+plot(X(1,1:5:end), X(2,1:5:end), 'or')
 hold on
-plot_every_fifth(xf_ckf, Pf_ckf, 1)
-plot(xf_ckf(1, :), xf_ckf(2, :), 'g')
+plot(xf_ckf(1, 1:5:end), xf_ckf(2, 1:5:end), 'og')
+plot(meas_x(1,1:5:end), meas_y(1,1:5:end), 'o')
+plot_every_fifth(xf_ckf, Pf_ckf, 3)
+legend('x', 'x_f', 'y', '3\sigma')
 title('Case 2 , ckf')
-
+%%
 % c
-rng(1805745885)
+rng(10)
+close all; clc
 error_ekf = [];
 error_ckf = [];
 error_ukf = [];
@@ -301,21 +243,43 @@ for i = 1 : N
 end
 
 figure
-histogram(error_ekf, 'Normalization', 'pdf'); 
-title('Case 1 - Estimation error ekf')
+subplot(2,3,1)
+histo = histogram(error_ekf(1,:), 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ekf - x')
+axis([-sqrt(cov(error_ekf(1,:)))*3 sqrt(cov(error_ekf(1,:)))*3 0 max(histo.Values)])
 
-figure
-histogram(error_ukf, 'Normalization', 'pdf'); 
-title('Case 1 - Estimation error ukf')
 
-figure
-histogram(error_ckf, 'Normalization', 'pdf'); 
-title('Case 1 - Estimation error ckf')
+subplot(2,3,4)
+histo = histogram(error_ekf(2,:), 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ekf - y')
+axis([-sqrt(cov(error_ekf(2,:)))*3 sqrt(cov(error_ekf(2,:)))*3 0 max(histo.Values)])
+
+subplot(2,3,2)
+histo = histogram(error_ukf(1,:), 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ukf - x')
+axis([-sqrt(cov(error_ukf(1,:)))*3 sqrt(cov(error_ukf(1,:)))*3 0 max(histo.Values)])
+
+subplot(2,3,5)
+histo = histogram(error_ukf(2,:), 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ukf - y')
+axis([-sqrt(cov(error_ukf(2,:)))*3 sqrt(cov(error_ukf(2,:)))*3 0 max(histo.Values)])
+
+subplot(2,3,3)
+histo = histogram(error_ckf(1,:), 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ckf - x')
+axis([-sqrt(cov(error_ckf(1,:)))*3 sqrt(cov(error_ckf(1,:)))*3 0 max(histo.Values)])
+
+subplot(2,3,6)
+histo = histogram(error_ckf(2,:), 'Normalization', 'pdf'); 
+title('Case 1 - Estimation error ckf - y')
+axis([-sqrt(cov(error_ckf(2,:)))*3 sqrt(cov(error_ckf(2,:)))*3 0 max(histo.Values)])
+
 
 error_ekf = [];
 error_ckf = [];
 error_ukf = [];
 N = 100;
+rng(11)
 
 for i = 1 : N
     [X, Y, xf_ekf, Pf_ekf, xf_ukf, Pf_ukf, xf_ckf, Pf_ckf] = generate_data_and_estimate(x0, P0, f, Q2, R2, n, h);
@@ -325,16 +289,35 @@ for i = 1 : N
 end
 
 figure
-histogram(error_ekf, 'Normalization', 'pdf'); 
-title('Case 2 - Estimation error ekf')
+subplot(2,3,1)
+histo = histogram(error_ekf(1,:), 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ekf - x')
+axis([-sqrt(cov(error_ekf(1,:)))*3 sqrt(cov(error_ekf(1,:)))*3 0 max(histo.Values)])
 
-figure
-histogram(error_ukf, 'Normalization', 'pdf'); 
-title('Case 2 - Estimation error ukf')
+subplot(2,3,4)
+histo = histogram(error_ekf(2,:), 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ekf - y')
+axis([-sqrt(cov(error_ekf(2,:)))*3 sqrt(cov(error_ekf(2,:)))*3 0 max(histo.Values)])
 
-figure
-histogram(error_ckf, 'Normalization', 'pdf'); 
-title('Case 2 - Estimation error ckf')
+subplot(2,3,2)
+histo = histogram(error_ukf(1,:), 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ukf - x')
+axis([-sqrt(cov(error_ukf(1,:)))*3 sqrt(cov(error_ukf(1,:)))*3 0 max(histo.Values)])
+
+subplot(2,3,5)
+histo = histogram(error_ukf(2,:), 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ukf - y')
+axis([-sqrt(cov(error_ukf(2,:)))*3 sqrt(cov(error_ukf(2,:)))*3 0 max(histo.Values)])
+
+subplot(2,3,3)
+histo = histogram(error_ckf(1,:), 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ckf - x')
+axis([-sqrt(cov(error_ckf(1,:)))*3 sqrt(cov(error_ckf(1,:)))*3 0 max(histo.Values)])
+
+subplot(2,3,6)
+histo = histogram(error_ckf(2,:), 'Normalization', 'pdf'); 
+title('Case 2 - Estimation error ckf - y')
+axis([-sqrt(cov(error_ckf(2,:)))*3 sqrt(cov(error_ckf(2,:)))*3 0 max(histo.Values)])
 
 
 %% 3
@@ -393,7 +376,7 @@ f = @(x)coordinatedTurnMotion(x, T);
 h = @(x)dualBearingMeasurement(x, s1, s2);
 Y = genNonLinearMeasurementSequence(X, h, R);
 
-Q = diag([0 0 0 0 pi/180*0.2]).^2;
+Q = diag([0 0 0.1 0 pi/180*0.02]);
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 plot(X(1,:), X(2,:))
 hold on
@@ -401,11 +384,11 @@ plot(xf(1,:), xf(2,:))
 legend('x', 'xf')
 title('Good filter')
 %plot(convert_measurement_to_position(Y(1,:), Y(2,:), s1, s2), 'o')
-%%
+
 
 % 3c
 %figure
-Q = diag([0 0 0 0 pi/180*0.2]).^2;
+Q = diag([0 0 0 0 pi/180*0.3]).^2;
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 figure
 plot(X(1,:), X(2,:))
@@ -443,6 +426,20 @@ for i = 1:5:size(xf,2)
 end
 legend('x', 'xf')
 title('Over tuned')
+
+figure
+Q = diag([0 0 0 0 pi/180*0.3]).^2;
+[xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
+vals = [];
+for i = 1 : size(xf,2)
+   vals = [vals norm(X(1:2, i+1) - xf(1:2, i))];  
+end
+plot(vals)
+hold on
+title('position error')
+
+
+
 
 % 3d
 
@@ -501,6 +498,26 @@ s2x = s2(1);
 
 y = (t2.*(-s1y+s1x.*t1-s2x.*t1) + t1.*s2y)./(t1-t2);
 x = (y-s1(2))./t1 + s1(1);
+end
+
+function [x, y] = getPosFromMeasurement(y1, y2, s1, s2)
+%GETPOSFROMMEASUREMENT computes the intersection point (transformed 2D
+%measurement in Cartesian coordinate system) given two sensor locations and
+%two bearing measurements, one from each sensor. 
+%INPUT: y1: bearing measurement from sensor 1 --- scalar
+%       y2: bearing measurement from sensor 2 --- scalar
+%       s1: location of sensor 1 in 2D Cartesian --- vector of length 2
+%       s2: location of sensor 2 in 2D Cartesian --- vector of length 2
+%OUTPUT: x: coordinate of intersection point on x axis
+%        y: coordinate of intersection point on y axis
+
+%This problem can be formulated as solving a set of two linear equations
+%with two unknowns. Specifically, one would like to obtain (x,y) by solving
+% (y-s1(2))=(x-s1(1))tan(y1) and (y-s2(2))=(x-s2(1))tan(y2).
+
+x = (s2(2) - s1(2) + tan(y1)*s1(1) - tan(y2)*s2(1))/(tan(y1) - tan(y2)); 
+y = s1(2) + tan(y1)*(x(1,:) - s1(1));
+
 end
 
 function [ xy ] = sigmaEllipse2D( mu, Sigma, level, npoints )
