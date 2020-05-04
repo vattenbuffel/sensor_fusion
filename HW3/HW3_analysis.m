@@ -103,27 +103,9 @@ title('P_2')
 
 
 
-% d
-% In the first case they all seem to work alright. In the second case
-% ckf and ukf seem to work alright as well. How ever ekf doesn't work well
-% here. This is because of the positioning of the sensor. This time it's
-% positioned closer to where the measurements happen. This means that a
-% small positional deviation leads to a bigger angle deviation. This in 
-% turn means that the nonlinear function, tan, cannot be approximated as
-% well as linear. It's approximated as linear better in case 1 than in case
-% 2 and as such ekf doesn't work as well.
-% Symmetric around mu
-
-% e 
-% Yes the approximated mean and cov seem to fit well. Altough in case 2
-% there are some white inside the ckf and ukf cov. This means that there
-% are no sampled values there, so they're either unlikely or impossible
-% while the cov says that they're not too unlikely. Due to the
-% symmetrically around the mean I'd say that it's approximately Gaussian
-
-
 %% 2
 clc; close all; clear;
+% set up parameters
 rng(0)
 x0 = [0 0 14 0 0].';
 P0 = diag([100 100 4 (pi/180)^2 (5*pi/180)^2]);
@@ -144,6 +126,7 @@ Q2 = Q1;
 
 
 % a
+% Generate state, measurement and filter sequences
 X = genNonLinearStateSequence(x0, P0, f, Q1, n);
 Y = genNonLinearMeasurementSequence(X, h, R1);
 
@@ -156,6 +139,8 @@ X = X(:, 2:end);
 
 [meas_x,meas_y] = convert_measurement_to_position(Y(1, :), Y(2, :), S1, S2);
 
+
+% PLot the sequences
 %EKF
 plot(X(1,1:5:end), X(2,1:5:end), 'or')
 hold on
@@ -186,6 +171,7 @@ legend('x', 'x_f', 'y', '3\sigma')
 title('Case 1, ckf')
 
 % b
+% Generate state, measurement and filter sequences
 X = genNonLinearStateSequence(x0, P0, f, Q2, n);
 Y = genNonLinearMeasurementSequence(X, h, R2);
 
@@ -197,6 +183,7 @@ X = X(:, 2:end);
 
 [meas_x,meas_y] = convert_measurement_to_position(Y(1, :), Y(2, :), S1, S2);
 
+% PLot the sequences
 %EKF
 figure
 plot(X(1,1:5:end), X(2,1:5:end), 'or')
@@ -226,7 +213,7 @@ plot(meas_x(1,1:5:end), meas_y(1,1:5:end), 'o')
 plot_every_fifth(xf_ckf, Pf_ckf, 3)
 legend('x', 'x_f', 'y', '3\sigma')
 title('Case 2 , ckf')
-%%
+
 % c
 rng(10)
 close all; clc
@@ -235,6 +222,7 @@ error_ckf = [];
 error_ukf = [];
 N = 100;
 
+% Simulate N amount of sequences and store the estimation error
 for i = 1 : N
     [X, Y, xf_ekf, Pf_ekf, xf_ukf, Pf_ukf, xf_ckf, Pf_ckf] = generate_data_and_estimate(x0, P0, f, Q1, R1, n, h);
     error_ekf = [error_ekf X-xf_ekf];
@@ -242,6 +230,7 @@ for i = 1 : N
     error_ckf = [error_ekf X-xf_ckf];
 end
 
+% Plot histograms of the estimation errors
 figure
 subplot(2,3,1)
 histo = histogram(error_ekf(1,:), 'Normalization', 'pdf'); 
@@ -322,6 +311,8 @@ axis([-sqrt(cov(error_ckf(2,:)))*3 sqrt(cov(error_ckf(2,:)))*3 0 max(histo.Value
 
 %% 3
 clc; close all; clear;
+% Set up simulation parameters
+rng(0)
 [X, T] = truce_track();
 
 x0 = zeros(5,1);
@@ -335,6 +326,7 @@ h = @(x)dualBearingMeasurement(x, s1, s2);
 
 
 % a
+% Generate different model noise values
 close all; clc
 Q1 = diag([0 0 1 0 pi/180]);
 Q2 = diag([0 0 1*10^2 0 pi/180]);
@@ -345,7 +337,7 @@ Q6 = diag([0 0 1 0 pi/180/100]);
 Q7 = diag([0 0 1 0 pi/180])/100;
 Q = [Q1 Q2 Q3 Q4 Q5 Q6 Q7].^2;
 
-
+% Estimate the path using the different model noises
 for i = 1 : size(Q, 2) / size(X,1)
     Y = genNonLinearMeasurementSequence(X, h, R);
     [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q(:, 5*(i-1) + 1 : 5*i), h, R, 'CKF');
@@ -353,17 +345,18 @@ for i = 1 : size(Q, 2) / size(X,1)
     plot(X(1,:), X(2,:));
     hold on
     plot(xf(1,:), xf(2,:))
+    legend('x', 'x_f')
+    %[meas_x,meas_y] = convert_measurement_to_position(Y(1, :), Y(2, :), s1, s2);
+    %plot(meas_x, meas_y);
     title(['Q = diag([',num2str(diag(Q(:, 5*(i-1) + 1 : 5*i)).'), '])'])
 end
 
 
-% d
-% No it's not possible. In the straight bit we want a 0 omega and we don't
-% want that in the bend
 
 %% 3b
 clc; clear; close all
-%clc; clear; clf
+% Set up parameters
+rng(100)
 [X, T] = truce_track();
 
 x0 = zeros(5,1);
@@ -376,7 +369,8 @@ f = @(x)coordinatedTurnMotion(x, T);
 h = @(x)dualBearingMeasurement(x, s1, s2);
 Y = genNonLinearMeasurementSequence(X, h, R);
 
-Q = diag([0 0 0.1 0 pi/180*0.02]);
+% Estimate and plot a good filter
+Q = diag([0 0 0 0 pi/180*0.001]);
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 plot(X(1,:), X(2,:))
 hold on
@@ -387,48 +381,52 @@ title('Good filter')
 
 
 % 3c
-%figure
-Q = diag([0 0 0 0 pi/180*0.3]).^2;
+% Estimate and plot a good filter
+Q = diag([0 0 0 0 pi/180*0.001]);
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 figure
 plot(X(1,:), X(2,:))
 hold on
 plot(xf(1,:), xf(2,:))
-for i = 1:5:size(xf,2)
-   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 1, 256 );
+for i = 1:10:size(xf,2)
+   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 3, 256 );
    plot(xy(1,:), xy(2,:), '--b')
 end
-legend('x', 'xf')
+legend('x', 'xf', '3\sigma')
 title('Well tuned')
 
+
+% Estimate and plot a under tuned filter
 figure
 Q = diag([0 0 0.000005 0 pi/180*0.000001]).^2;
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 plot(X(1,:), X(2,:))
 hold on
 plot(xf(1,:), xf(2,:))
-for i = 1:5:size(xf,2)
-   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 1, 256 );
+for i = 1:10:size(xf,2)
+   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 3, 256 );
    plot(xy(1,:), xy(2,:), '--b')
 end
-legend('x', 'xf')
+legend('x', 'xf', '3\sigma')
 title('Under tuned')
 
+% Estimate and plot a under over filter
 figure
 Q = diag([0 0 100 0 pi/1.80]).^2;
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 plot(X(1,:), X(2,:))
 hold on
 plot(xf(1,:), xf(2,:))
-for i = 1:5:size(xf,2)
-   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 1, 256 );
+for i = 1:10:size(xf,2)
+   [ xy ] = sigmaEllipse2D( xf(1:2,i), Pf(1:2, 1:2, i), 3, 256 );
    plot(xy(1,:), xy(2,:), '--b')
 end
-legend('x', 'xf')
+legend('x', 'xf', '3\sigma')
 title('Over tuned')
 
+% Calculate the norm of the estimation error
 figure
-Q = diag([0 0 0 0 pi/180*0.3]).^2;
+Q = diag([0 0 0 0 pi/180*0.001]);
 [xf, Pf, xp, Pp] = nonLinearKalmanFilter(Y, x0, P0, f, Q, h, R, 'CKF');
 vals = [];
 for i = 1 : size(xf,2)
@@ -437,6 +435,7 @@ end
 plot(vals)
 hold on
 title('position error')
+legend('|x-x_f|_2')
 
 
 
