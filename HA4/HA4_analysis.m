@@ -29,7 +29,8 @@ plot_error_cov(xs, Ps, 3, 5, '--g')
 plot_error_cov(xf, Pf, 3, 5, '--black')
 
 legend('x', 'x_s', 'x_f', 'y', '3\sigma_s', '3\sigma_f')
-legend('x', 'x_s', 'x_f', '3\sigma_s', '3\sigma_f')
+%legend('x', 'x_s', 'x_f', '3\sigma_s', '3\sigma_f')
+title('a')
 
 % b
 [y, H] = rangeBearingMeasurements(X(:, 151) + 100*ones(size(X(:, 151))), sensor_placement(:,1));
@@ -48,6 +49,7 @@ plot_error_cov(xf, Pf, 3, 5, '--black')
 
 legend('x', 'x_s', 'x_f', 'y', '3\sigma_s', '3\sigma_f')
 %legend('x', 'x_s', 'x_f', '3\sigma_s', '3\sigma_f')
+title('b')
 
 
 
@@ -61,8 +63,8 @@ Q = 1.5;
 R = 2.5;
 P0 = 6;
 x0 = 2;
-N = 50;
-npoints = 25;
+N = 10;
+npoints = 100;
 
 X = x0 + mvnrnd(0, P0);
 for i = 1:N
@@ -76,8 +78,8 @@ Y = X(:,2:end) + mvnrnd(0, R, N).';
 plotFunc_handle_1  = @(k, X, Xmin1, W, j) plotPostPdf(k, X, W, Xk, Pk, true, 1, [0 100 0 1]);
 plotFunc_handle_2  = @(k, X, Xmin1, W, j) plotPostPdf(k, X, W, Xk, Pk, false, 1, [0 100 0 1]);
 
-[xfpr, Pfpr, Xpr, Wpr] = pfFilter(x0, P0, Y, @(x) x, Q, @(x)x, R, npoints, true, plotFunc_handle_1);
-[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, @(x) x, Q, @(x)x, R, npoints, false, plotFunc_handle_2);
+[xfpr, Pfpr, Xpr, Wpr] = pfFilter(x0, P0, Y, @(x) x, Q, @(x)x, R, npoints, true, plotFunc_handle_1, false);
+[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, @(x) x, Q, @(x)x, R, npoints, false, plotFunc_handle_2, false);
 X = X(2:end);
 
 
@@ -100,7 +102,7 @@ legend('\Sigma_{Kalman}', '\Sigma_{particle filter with resampling}', '\Sigma_{p
 %% 2b
 clc; 
 plotFunc_handle  = @(k, X, Xmin1, W, j)  plotPartTrajs(k, X, Xmin1, j);
-[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, @(x) x, Q, @(x)x, R, npoints, false, plotFunc_handle);
+[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, @(x) x, Q, @(x)x, R, npoints, false, plotFunc_handle, false);
 hold on
 plot(X, '-oblack')
 
@@ -108,7 +110,7 @@ plot(X, '-oblack')
 figure
 clc; 
 plotFunc_handle  = @(k, X, Xmin1, W, j)  plotPartTrajs(k, X, Xmin1, j);
-[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, @(x) x, Q, @(x)x, R, npoints, true, plotFunc_handle);
+[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, @(x) x, Q, @(x)x, R, npoints, true, plotFunc_handle, false);
 hold on
 plot(X, '-oblack')
 
@@ -141,7 +143,7 @@ Y = Xv + mvnrnd(zeros(size(Xk,1), 1), R, size(Xk,2)-1).';
 % 0. p(X_in_house) = p(X_outside_of_map) = 0
 
 
-% d
+%% 3d
 Xk = [Xk(:,1:end-1); Xv];
 
 x0 = Xk(:,1);
@@ -157,7 +159,7 @@ h = @(x) [x(3); x(4)];
 npoints = 2000;
 
 plot_xy  = @(k, X, Xmin1, W, j)  plot(X(1,:)*W.', X(2,:)*W.', '-bo');
-[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, f, Q, h, R, npoints, true, plot_xy);
+[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, f, Q, h, R, npoints, true, plot_xy, true);
 plot(xfpnr(1,:), xfpnr(2,:), '-o')
 
 meas = cumsum(Y.').' + x0(1:2); 
@@ -172,12 +174,40 @@ fprintf("done\n");
 fprintf("sum of all filter error = %f\n", sum(sum((abs(Xk-xfpnr)).').'));
 
 
+%% 3 e
+Xk = [Xk(:,1:end-1); Xv];
 
+x0 = Xk(:,1);
+P0 = zeros(4);
+
+f = @(x) [x(1) + x(3)
+          x(2) + x(4)
+          x(3)
+          x(4)];
+
+h = @(x) [x(3); x(4)];
+
+npoints = 2000;
+
+plot_xy  = @(k, X, Xmin1, W, j)  plot(X(1,:)*W.', X(2,:)*W.', '-bo');
+[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, f, Q, h, R, npoints, true, plot_xy, true);
+plot(xfpnr(1,:), xfpnr(2,:), '-o')
+
+meas = cumsum(Y.').' + x0(1:2); 
+%plot(meas(1,:), meas(2,:), '-*');
+axis([min([meas(1,:) 0 xfpnr(1,:)]) max([meas(1,:) 12 xfpnr(1,:)]) min([meas(2,:) 0 xfpnr(2,:)]) max([meas(2,:) 10 xfpnr(2,:)])])
+
+%plot(Xk(1,:), Xk(2,:), 'black')
+true_x_cum = cumsum(Xk(3:4,:).').' + x0(1:2);
+%plot(true_x_cum(1,:), true_x_cum(2,:), '-black*');
+
+fprintf("done\n");
+fprintf("sum of all filter error = %f\n", sum(sum((abs(Xk-xfpnr)).').'));
 
 
 %% new functions
 
-function [xfp, Pfp, Xp, Wp] = pfFilter(x_0, P_0, Y, proc_f, proc_Q, meas_h, meas_R, N, bResample, plotFunc)
+function [xfp, Pfp, Xp, Wp] = pfFilter(x_0, P_0, Y, proc_f, proc_Q, meas_h, meas_R, N, bResample, plotFunc, three)
 %PFFILTER Filters measurements Y using the SIS or SIR algorithms and a
 % state-space model.
 %
@@ -217,9 +247,12 @@ j = [];
 % Draw the first particles for t=0
 X = x_0 + mvnrnd(zeros(size(x_0)), P_0, N).';
 W = ones(1, size(X,2)) / K;
-for i = 1:size(X,2)
-    if isOnRoad(X(1,i), X(2,i)) == 0
-       W(i) = 10^-10; 
+
+if three
+    for i = 1:size(X,2)
+        if isOnRoad(X(1,i), X(2,i)) == 0
+           W(i) = 10^-10; 
+        end
     end
 end
 W = W/sum(W);
@@ -229,9 +262,9 @@ W = W/sum(W);
 for i = 1:K
     % Filter next step
     Xmin1 = X;
-    [X, W] = pfFilterStep(X, W, Y(:,i), proc_f, proc_Q, meas_h, meas_R);
+    [X, W] = pfFilterStep(X, W, Y(:,i), proc_f, proc_Q, meas_h, meas_R, three);
     
-    if i > 0%1
+    if i > 1
         plotFunc(i, X, Xmin1, W, j);
     end
     
@@ -252,7 +285,7 @@ end
 
 end
 
-function [X_k, W_k] = pfFilterStep(X_kmin1, W_kmin1, yk, proc_f, proc_Q, meas_h, meas_R)
+function [X_k, W_k] = pfFilterStep(X_kmin1, W_kmin1, yk, proc_f, proc_Q, meas_h, meas_R, three)
 %PFFILTERSTEP Compute one filter step of a SIS/SIR particle filter.
 %
 % Input:
@@ -274,19 +307,16 @@ X_k = proc_f(X_kmin1) + mvnrnd(zeros(size(X_kmin1, 1), 1) , proc_Q, size(X_kmin1
 
 % Calculate the weights
 W_k = zeros(size(W_kmin1));
-counter = 0;
-while sum(W_k) == 0
-    counter = counter + 1;
-    %fprintf("Rolling weights attempt nr: %d\n", counter);
-    for i = 1:size(X_kmin1, 2)
-       %W_k(i) = W_kmin1(i) * normpdf(yk, meas_h(X_k(:, i)), sqrtm(meas_R));
-        W_k(i) = W_kmin1(i) * mvnpdf(yk, meas_h(X_k(:, i)), meas_R);
-        
-        if isOnRoad(X_k(1,i), X_k(2,i)) == 0
-            W_k(i) = W_k(i)*10^-10;
-        end
+
+for i = 1:size(X_kmin1, 2)
+   %W_k(i) = W_kmin1(i) * normpdf(yk, meas_h(X_k(:, i)), sqrtm(meas_R));
+    W_k(i) = W_kmin1(i) * mvnpdf(yk, meas_h(X_k(:, i)), meas_R);
+
+    if three && isOnRoad(X_k(1,i), X_k(2,i)) == 0
+        W_k(i) = W_k(i)*10^-10;
     end
 end
+
 
 
 % Normalize the weights
