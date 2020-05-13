@@ -127,8 +127,7 @@ for i = 2:size(Xk,2)
     Xv = [Xv Xk(:,i)-Xk(:,i-1)];
 end
 
-R = [0.0005 0
-     0 0.0005];
+R = diag( [0.0005 0.0005 ] );
  
 Q = [0.001 0 0 0
      0 0.001 0 0
@@ -143,71 +142,86 @@ Y = Xv + mvnrnd(zeros(size(Xk,1), 1), R, size(Xk,2)-1).';
 % 0. p(X_in_house) = p(X_outside_of_map) = 0
 
 
-%% 3d
+% 3d
+% Xk = [Xk(:,1:end-1); Xv];
+% 
+% x0 = Xk(:,1);
+% P0 = zeros(4);
+% 
+% f = @(x) [x(1,:) + x(3,:)
+%           x(2,:) + x(4,:)
+%           x(3,:)
+%           x(4,:)];
+% 
+% h = @(x) [x(3); x(4); isOnRoad(x(1), x(2))];
+% 
+% npoints = 2000;
+% 
+% plot_xy  = @(k, X, Xmin1, W, j)  plot(X(1,:)*W.', X(2,:)*W.', '-bo');
+% [xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, f, Q, h, R, npoints, true, plot_xy, true);
+% plot(xfpnr(1,:), xfpnr(2,:), '-o')
+% 
+% meas = cumsum(Y.').' + x0(1:2); 
+% %plot(meas(1,:), meas(2,:), '-*');
+% axis([min([meas(1,:) 0 xfpnr(1,:)]) max([meas(1,:) 12 xfpnr(1,:)]) min([meas(2,:) 0 xfpnr(2,:)]) max([meas(2,:) 10 xfpnr(2,:)])])
+% 
+% %plot(Xk(1,:), Xk(2,:), 'black')
+% true_x_cum = cumsum(Xk(3:4,:).').' + x0(1:2);
+% %plot(true_x_cum(1,:), true_x_cum(2,:), '-black*');
+% 
+% fprintf("done\n");
+% fprintf("sum of all filter error = %f\n", sum(sum((abs(Xk-xfpnr)).').'));
+% 
+
+% 3 e
 Xk = [Xk(:,1:end-1); Xv];
 
-x0 = Xk(:,1);
+x_0 = Xk(:,1);
 P0 = zeros(4);
 
-f = @(x) [x(1) + x(3)
-          x(2) + x(4)
-          x(3)
-          x(4)];
+f = @(x) [x(1,:) + x(3,:)
+          x(2,:) + x(4,:)
+          x(3,:)
+          x(4,:)];
 
-h = @(x) [x(3); x(4)];
+h = @(x) [x(3); x(4); isOnRoad(x(1), x(2))];
 
-npoints = 2000;
+npoints = 1000;
+
+dx = sqrt(8*10/npoints);
+dy = dx;
+x0 = zeros(4, size(1:dy:9, 2)*size(1:dx:11, 2) );
+index = 0;
+for y = 1:dy:9
+    for x = 1:dx:11
+        index = index + 1;
+        x0(:,index) = [x;y;0;0];
+    end
+end
+
+R = diag( [0.0005 0.0005 ] ); 
+Q = diag([0.01 0.01 0.001 0.001]);
 
 plot_xy  = @(k, X, Xmin1, W, j)  plot(X(1,:)*W.', X(2,:)*W.', '-bo');
-[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, f, Q, h, R, npoints, true, plot_xy, true);
+[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x_0, P0, Y, f, Q, h, R, size(x0, 2), true, plot_xy, true, x0);
 plot(xfpnr(1,:), xfpnr(2,:), '-o')
 
-meas = cumsum(Y.').' + x0(1:2); 
+meas = cumsum(Y.').' + x_0(1:2); 
 %plot(meas(1,:), meas(2,:), '-*');
 axis([min([meas(1,:) 0 xfpnr(1,:)]) max([meas(1,:) 12 xfpnr(1,:)]) min([meas(2,:) 0 xfpnr(2,:)]) max([meas(2,:) 10 xfpnr(2,:)])])
 
 %plot(Xk(1,:), Xk(2,:), 'black')
-true_x_cum = cumsum(Xk(3:4,:).').' + x0(1:2);
+true_x_cum = cumsum(Xk(3:4,:).').' + x_0(1:2);
 %plot(true_x_cum(1,:), true_x_cum(2,:), '-black*');
 
 fprintf("done\n");
 fprintf("sum of all filter error = %f\n", sum(sum((abs(Xk-xfpnr)).').'));
 
-
-%% 3 e
-Xk = [Xk(:,1:end-1); Xv];
-
-x0 = Xk(:,1);
-P0 = zeros(4);
-
-f = @(x) [x(1) + x(3)
-          x(2) + x(4)
-          x(3)
-          x(4)];
-
-h = @(x) [x(3); x(4)];
-
-npoints = 2000;
-
-plot_xy  = @(k, X, Xmin1, W, j)  plot(X(1,:)*W.', X(2,:)*W.', '-bo');
-[xfpnr, Pfpnr, Xpnr, Wpnr] = pfFilter(x0, P0, Y, f, Q, h, R, npoints, true, plot_xy, true);
-plot(xfpnr(1,:), xfpnr(2,:), '-o')
-
-meas = cumsum(Y.').' + x0(1:2); 
-%plot(meas(1,:), meas(2,:), '-*');
-axis([min([meas(1,:) 0 xfpnr(1,:)]) max([meas(1,:) 12 xfpnr(1,:)]) min([meas(2,:) 0 xfpnr(2,:)]) max([meas(2,:) 10 xfpnr(2,:)])])
-
-%plot(Xk(1,:), Xk(2,:), 'black')
-true_x_cum = cumsum(Xk(3:4,:).').' + x0(1:2);
-%plot(true_x_cum(1,:), true_x_cum(2,:), '-black*');
-
-fprintf("done\n");
-fprintf("sum of all filter error = %f\n", sum(sum((abs(Xk-xfpnr)).').'));
-
+%plot(x0(1, :), x0(2,:),'o')
 
 %% new functions
 
-function [xfp, Pfp, Xp, Wp] = pfFilter(x_0, P_0, Y, proc_f, proc_Q, meas_h, meas_R, N, bResample, plotFunc, three)
+function [xfp, Pfp, Xp, Wp] = pfFilter(x_0, P_0, Y, proc_f, proc_Q, meas_h, meas_R, N, bResample, plotFunc, three, x0)
 %PFFILTER Filters measurements Y using the SIS or SIR algorithms and a
 % state-space model.
 %
@@ -238,14 +252,19 @@ n = size(P_0,1);
 K = size(Y,2);
 
 % Pre allocate
-xfp = [];
+%xfp = [];
+xfp = zeros(n,K);
 Pfp = zeros(n,n,K);
 Xp = zeros(n,N,K);
-Wp = [];
+Wp = zeros(N,K);
 j = [];
 
-% Draw the first particles for t=0
-X = x_0 + mvnrnd(zeros(size(x_0)), P_0, N).';
+if nargin < 12
+    % Draw the first particles for t=0
+    X = x_0 + mvnrnd(zeros(size(x_0)), P_0, N).';
+else
+    X = x0;
+end
 W = ones(1, size(X,2)) / K;
 
 if three
@@ -269,9 +288,11 @@ for i = 1:K
     end
     
     % Update the outputs
-    Wp = [Wp W.'];
-    Xp(:,:,i) = X;
-    xfp = [xfp X*W.'];
+    %Wp = [Wp W.'];
+    Wp(:,i) = W.';
+    Xp(:,:,i) = X(:,1:N);
+    %xfp = [xfp X*W.'];
+    xfp(:,i) = X*W.';
     Pfp(:,:,i) = (X - X*W.') * ((X - X*W.').' .* W.');
     
     if bResample 
@@ -310,13 +331,17 @@ W_k = zeros(size(W_kmin1));
 
 for i = 1:size(X_kmin1, 2)
    %W_k(i) = W_kmin1(i) * normpdf(yk, meas_h(X_k(:, i)), sqrtm(meas_R));
-    W_k(i) = W_kmin1(i) * mvnpdf(yk, meas_h(X_k(:, i)), meas_R);
-
-    if three && isOnRoad(X_k(1,i), X_k(2,i)) == 0
-        W_k(i) = W_k(i)*10^-10;
+   
+    y = meas_h(X_k(:, i));
+    if three == false
+        W_k(i) = W_kmin1(i) * mvnpdf(yk, y, meas_R);
+    else
+        W_k(i) = W_kmin1(i) * mvnpdf(yk, y(1:2), meas_R);
+        if y(3) == 0 
+            W_k(i) = W_k(i)*10^-10;
+        end
     end
 end
-
 
 
 % Normalize the weights
@@ -350,6 +375,7 @@ u = sort(u);
 
 j = [];
 Xr = [];
+
 
 % Do the resampling
 prev_index = -1;
