@@ -32,7 +32,7 @@ Y = [linspace(2.3, 5.7, n) linspace(5.7, 5.7, n) linspace(5.7, 2.3, n) linspace(
 load("X_tight.mat");
 load("Y_tight.mat");
 
-%[X,Y]=ginput;
+[X,Y]=ginput;
 plot([X+Y*i],'-*')
 
 Xk = [X';Y'];
