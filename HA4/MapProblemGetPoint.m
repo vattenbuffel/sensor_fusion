@@ -25,14 +25,11 @@ disp('Start clicking in the village to create a trajectory!')
 disp('Press "Return" to finish.')
 
 
-n = 5;
-X = [linspace(4.5, 4.5, n) linspace(4.5, 7.5, n) linspace(7.5, 7.5, n) linspace(7.5, 4.5, n)].';
-Y = [linspace(2.3, 5.7, n) linspace(5.7, 5.7, n) linspace(5.7, 2.3, n) linspace(2.3, 2.3, n)].';
 
 load("X_tight.mat");
 load("Y_tight.mat");
 
-[X,Y]=ginput;
+%[X,Y]=ginput;
 plot([X+Y*i],'-*')
 
 Xk = [X';Y'];

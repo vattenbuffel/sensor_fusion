@@ -145,7 +145,7 @@ Y = Xv + mvnrnd(zeros(size(Xk,1), 1), R, size(Xk,2)-1).';
 % 0. p(X_in_house) = p(X_outside_of_map) = 0
 
 
-% % 3d
+%% 3d
 Xk = [Xk(:,1:end-1); Xv];
 
 x0 = Xk(:,1);
@@ -210,9 +210,7 @@ x0 = x0(:,1:index);
 %plot(x0(1,:), x0(2,:), 'o')
 
 
-%R = diag( [0.0005 0.0005 ] );
-R = diag( [0.005 0.005 ] );
-%Q = diag([0.01 0.01 0.001 0.001]);
+R = diag( [0.0005 0.0005 ] );
 Q = diag([0.01 0.01 0.001 0.001]);
 
 plot_xy  = @(k, X, Xmin1, W, j)  plot(X(1,:)*W.', X(2,:)*W.', '-bo');
@@ -289,6 +287,8 @@ for i = 1:K
     if i > 1
         plotFunc(i, X, Xmin1, W, j);
     end
+    
+    
     
     % Update the outputs
     Wp(:,i) = W.';
