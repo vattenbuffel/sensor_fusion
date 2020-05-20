@@ -33,6 +33,9 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
                  -0.002582723004641   0.000782168729699   0.061062268681170];
     
     g0 = -[0.0171 -0.0403 -9.9719].';
+    Ra =    1.0e-03 *[0.1356   -0.0005    0.0001
+                      -0.0005    0.1441   -0.0066
+                      0.0001   -0.0066    0.2921];
 
     % Current filter state.
     x = [1; 0; 0 ;0];
@@ -81,12 +84,10 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
 
       acc = data(1, 2:4)';
       if ~any(isnan(acc))  % Acc measurements are available.
-        % Do something
+        [x, P] = mu_g(x, P, acc, Ra, g0);
       end
       gyr = data(1, 5:7)';
       if ~any(isnan(gyr))  % Gyro measurements are available.
-        %[x,P] = tu_qw(x, P, gyr, t-meas.t(end), Rw); %WTF is P? I never
-        %do anything with P OMG WTF IS THIS
         [x,P] = tu_qw(x, 0, gyr, t-meas.t(end), Rw);
       end
 
@@ -131,17 +132,7 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
     end
 end
 
-function [x,P] = tu_qw(x, P, omega, T, Rw)
-    % Not sure what to use P for
-    % Why should I handle the case if there is no omega? Nothing happens if
-    % there is no omega anyway
-    % WTF is x? Is that q? If not how the fuck do I get q????
-    gyr_noise_mean = 1e-3 * [-0.1026; 0.2574; 0.0012];
-    x = 1/2 * ((eye(size(x)) + Somega(omega)*T)*x + (eye(size(x)) + Sq(x)*T)*mvnrnd(gyr_noise_mean, Rw).');
-    
-    % x = (eye(size(x)) + Somega(omega)*T)*x;
-    % P =   (eye(size(x)) + Somega(omega)*T) * P * (eye(size(x)) +
-    % Somega(omega)*T) + mvnrnd(gyr_noise_mean, Rw).';
-    
-    [x, P] = mu_normalizeQ(x, P);
-end
+
+
+
+

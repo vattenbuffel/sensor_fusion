@@ -6,8 +6,12 @@ startup()
 %%
 clc; clear all; close all;
 [xhat, meas] = noa_filter();
+% euler_ang = quat2eul(xhat.x.', "XYZ");
+% figure
+% plot(euler_ang)
 %%
-clc; close all; clear;
+%clc; close all; clear;
+clc; clf; clear
 
 %load("meas_side.mat")
 %load("meas_flat.mat")

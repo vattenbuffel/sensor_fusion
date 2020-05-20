@@ -20,6 +20,13 @@ function [xhat, meas] = noa_filter_no_bull_shit(meas)
 %
 % Note that it is not necessary to provide inputs (calAcc, calGyr, calMag).
 
+    % Used for visualization.
+    figure(1);
+    subplot(1, 2, 1);
+    ownView = OrientationView('Own filter', gca);  % Used for visualization.
+    googleView = [];
+    counter = 0;  % Used to throttle the displayed frame rate.
+
     % Filter settings
     t0 = [];  % Initial time (initialize on first data received)
     nx = 4;   % Assuming that you use q as state variable.
@@ -69,6 +76,24 @@ function [xhat, meas] = noa_filter_no_bull_shit(meas)
         % Do something
     end
     
+    orientation = meas.orient(:,i)';  % Google's orientation estimate.
+
+      % Visualize result
+      if rem(counter, 10) == 0
+        setOrientation(ownView, x(1:4));
+        title(ownView, 'OWN', 'FontSize', 16);
+        if ~any(isnan(orientation))
+          if isempty(googleView)
+            subplot(1, 2, 2);
+            % Used for visualization.
+            googleView = OrientationView('Google filter', gca);
+          end
+          setOrientation(googleView, orientation);
+          title(googleView, 'GOOGLE', 'FontSize', 16);
+        end
+      end
+      counter = counter + 1;
+    
     % Save estimates
     xhat.x(:, end+1) = x;
     xhat.P(:, :, end+1) = P;
@@ -77,70 +102,6 @@ function [xhat, meas] = noa_filter_no_bull_shit(meas)
     
     end
 end
-
-function [x,P] = tu_qw(x, P, omega, T, Rw)
-    % Why should I handle the case if there is no omega? Nothing happens if
-    % there is no omega anyway
-    
-    x = (eye(size(x)) + T*Somega(omega))/2*x;
-    
-    wx = omega(1);
-    wy = omega(2);
-    wz = omega(3);
-    dfx = [1/2, 1/2 - (T*wx)/2, 1/2 - (T*wy)/2, 1/2 - (T*wz)/2
-          (T*wx)/2,              0,       (T*wz)/2,      -(T*wy)/2
-          (T*wy)/2,      -(T*wz)/2,              0,       (T*wx)/2
-          (T*wz)/2,       (T*wy)/2,      -(T*wx)/2,              0];
-    
-    
-%     %Used when calculating dfv
-%     syms v1 v2 v3  T q1 q2 q3 q4
-%     v = [v1;v2;v3];
-%     q = [q1;q2;q3;q4];
-%     dfv = T/2*Sq(q)*v;
-%     dfv = jacobian(dfv, v);
-    
-    v1 = 0;
-    v2 = 0;
-    v3 = 0;
-    q1 = x(1);
-    q2 = x(2);
-    q3 = x(3);
-    q4 = x(4); 
-    dfv =   [-(T*q2)/2, -(T*q3)/2, -(T*q4)/2
-            (T*q1)/2, -(T*q4)/2,  (T*q3)/2
-            (T*q4)/2,  (T*q1)/2, -(T*q2)/2
-            -(T*q3)/2,  (T*q2)/2,  (T*q1)/2];
-    
-    P = dfx*P*dfx.' + dfv*Rw*dfv.'; 
-    [x, P] = mu_normalizeQ(x, P);
-end
-
-
-function [x, P] = mu_g(x, P, yacc, Ra, g0)
-    h = Qq(x).'*g0;
-
-    % Used when calculating h_der
-%     syms q1 q2 q3 q4
-%     q = [q1;q2;q3;q4];
-%     h_der = Qq(q).'*g0;
-%     h_der = jacobian(h_der, q);
-%     h_der = subs(h_der, q, x);
-    %
-    q1 = x(1);
-    q2 = x(2);
-    q3 = x(3);
-    q4 = x(4);
-    h_der =  [(403*q4)/5000 - (99719*q3)/5000 - (171*q1)/2500, (403*q3)/5000 - (171*q2)/2500 + (99719*q4)/5000,                 (403*q2)/5000 - (99719*q1)/5000,                 (403*q1)/5000 + (99719*q2)/5000
- (403*q1)/2500 + (99719*q2)/5000 + (171*q4)/5000,                 (99719*q1)/5000 - (171*q3)/5000, (403*q3)/2500 - (171*q2)/5000 + (99719*q4)/5000,                 (171*q1)/5000 + (99719*q3)/5000
- (99719*q1)/2500 - (403*q2)/5000 - (171*q3)/5000,                 - (403*q1)/5000 - (171*q4)/5000,                   (403*q4)/5000 - (171*q1)/5000, (403*q3)/5000 - (171*q2)/5000 + (99719*q4)/2500];
-    
-    S = h_der*P*h_der.' + Ra;
-    K = P*h_der.'*S^-1;
-    x = x + K*(yacc-h);
-    P = P - K*S*K.';
-end
-
 
 
 
