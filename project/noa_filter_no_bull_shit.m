@@ -1,4 +1,4 @@
-function [xhat, meas] = filterTemplate(meas)
+function [xhat, meas] = noa_filter_no_bull_shit(meas)
 % FILTERTEMPLATE  Filter template
 %
 % This is a template function for how to collect and filter data
@@ -29,6 +29,11 @@ function [xhat, meas] = filterTemplate(meas)
     Rw = 1e-5 * [0.081733901510542   0.001723173871440  -0.002582723004641
                  0.001723173871440   0.105466716020954   0.000782168729699
                  -0.002582723004641   0.000782168729699   0.061062268681170];
+    
+    g0 = -[0.0171 -0.0403 -9.9719].';
+    Ra =    1.0e-03 *[0.1356   -0.0005    0.0001
+                      -0.0005    0.1441   -0.0066
+                      0.0001   -0.0066    0.2921];
              
     t0 = meas.t(1);
     old_t = t0;
@@ -51,14 +56,12 @@ function [xhat, meas] = filterTemplate(meas)
       
     acc = meas.acc(:,i);
     if ~any(isnan(acc))  % Acc measurements are available.
-        % Do something
+        [x, P] = mu_g(x, P, acc, Ra, g0);
     end
     
     gyr = meas.gyr(:,i);
     if ~any(isnan(gyr))  % Gyro measurements are available.
-        %[x,P] = tu_qw(x, P, gyr, t-meas.t(end), Rw); %WTF is P? I never
-        %do anything with P OMG WTF IS THIS
-        [x,P] = tu_qw(x, 0, gyr, t-meas.t(i-1), Rw);
+        [x,P] = tu_qw(x, P, gyr, t-meas.t(i-1), Rw); 
     end
 
     mag = meas.mag(:,i);
@@ -76,11 +79,72 @@ function [xhat, meas] = filterTemplate(meas)
 end
 
 function [x,P] = tu_qw(x, P, omega, T, Rw)
-    % Not sure what to use P for
     % Why should I handle the case if there is no omega? Nothing happens if
     % there is no omega anyway
-    % WTF is x? Is that q? If not how the fuck do I get q????
-    gyr_noise_mean = 1e-3 * [-0.1026; 0.2574; 0.0012];
-    x = 1/2 * ((eye(size(x)) + Somega(omega)*T)*x + (eye(size(x)) + Sq(x)*T)*mvnrnd(gyr_noise_mean, Rw).');
+    
+    x = (eye(size(x)) + T*Somega(omega))/2*x;
+    
+    wx = omega(1);
+    wy = omega(2);
+    wz = omega(3);
+    dfx = [1/2, 1/2 - (T*wx)/2, 1/2 - (T*wy)/2, 1/2 - (T*wz)/2
+          (T*wx)/2,              0,       (T*wz)/2,      -(T*wy)/2
+          (T*wy)/2,      -(T*wz)/2,              0,       (T*wx)/2
+          (T*wz)/2,       (T*wy)/2,      -(T*wx)/2,              0];
+    
+    
+%     %Used when calculating dfv
+%     syms v1 v2 v3  T q1 q2 q3 q4
+%     v = [v1;v2;v3];
+%     q = [q1;q2;q3;q4];
+%     dfv = T/2*Sq(q)*v;
+%     dfv = jacobian(dfv, v);
+    
+    v1 = 0;
+    v2 = 0;
+    v3 = 0;
+    q1 = x(1);
+    q2 = x(2);
+    q3 = x(3);
+    q4 = x(4); 
+    dfv =   [-(T*q2)/2, -(T*q3)/2, -(T*q4)/2
+            (T*q1)/2, -(T*q4)/2,  (T*q3)/2
+            (T*q4)/2,  (T*q1)/2, -(T*q2)/2
+            -(T*q3)/2,  (T*q2)/2,  (T*q1)/2];
+    
+    P = dfx*P*dfx.' + dfv*Rw*dfv.'; 
     [x, P] = mu_normalizeQ(x, P);
 end
+
+
+function [x, P] = mu_g(x, P, yacc, Ra, g0)
+    h = Qq(x).'*g0;
+
+    % Used when calculating h_der
+%     syms q1 q2 q3 q4
+%     q = [q1;q2;q3;q4];
+%     h_der = Qq(q).'*g0;
+%     h_der = jacobian(h_der, q);
+%     h_der = subs(h_der, q, x);
+    %
+    q1 = x(1);
+    q2 = x(2);
+    q3 = x(3);
+    q4 = x(4);
+    h_der =  [(403*q4)/5000 - (99719*q3)/5000 - (171*q1)/2500, (403*q3)/5000 - (171*q2)/2500 + (99719*q4)/5000,                 (403*q2)/5000 - (99719*q1)/5000,                 (403*q1)/5000 + (99719*q2)/5000
+ (403*q1)/2500 + (99719*q2)/5000 + (171*q4)/5000,                 (99719*q1)/5000 - (171*q3)/5000, (403*q3)/2500 - (171*q2)/5000 + (99719*q4)/5000,                 (171*q1)/5000 + (99719*q3)/5000
+ (99719*q1)/2500 - (403*q2)/5000 - (171*q3)/5000,                 - (403*q1)/5000 - (171*q4)/5000,                   (403*q4)/5000 - (171*q1)/5000, (403*q3)/5000 - (171*q2)/5000 + (99719*q4)/2500];
+    
+    S = h_der*P*h_der.' + Ra;
+    K = P*h_der.'*S^-1;
+    x = x + K*(yacc-h);
+    P = P - K*S*K.';
+end
+
+
+
+
+
+
+
+

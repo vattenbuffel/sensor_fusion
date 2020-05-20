@@ -11,7 +11,7 @@ clc; close all; clear;
 
 %load("meas_side.mat")
 %load("meas_flat.mat")
-%load("meas_turning.mat")
+load("meas_turning.mat")
 
 [xhat, meas] = noa_filter_no_bull_shit(meas);
 euler_ang = quat2eul(xhat.x.', "XYZ");
