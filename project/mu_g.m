@@ -1,8 +1,7 @@
 function [x, P] = mu_g(x, P, yacc, Ra, g0)
     
     h = Qq(x).'*g0;
-
-    % Used when calculating h_der
+    % Used when calculating h_der analytically
 %     syms q1 q2 q3 q4
 %     q = [q1;q2;q3;q4];
 %     h_der = Qq(q).'*g0;
@@ -21,4 +20,5 @@ function [x, P] = mu_g(x, P, yacc, Ra, g0)
     K = P*h_der.'*S^-1;
     x = x + K*(yacc-h);
     P = P - K*S*K.';
+    [x, P] = mu_normalizeQ(x, P);
 end

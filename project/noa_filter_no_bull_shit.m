@@ -69,6 +69,8 @@ function [xhat, meas] = noa_filter_no_bull_shit(meas)
     gyr = meas.gyr(:,i);
     if ~any(isnan(gyr))  % Gyro measurements are available.
         [x,P] = tu_qw(x, P, gyr, t-meas.t(i-1), Rw); 
+    elseif ~any(isnan(meas.gyr(:, i)))
+          [x,P] = tu_qw(x, P, gyr, t-t0-meas.t(end), Rw);
     end
 
     mag = meas.mag(:,i);

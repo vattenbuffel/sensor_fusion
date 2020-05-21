@@ -30,12 +30,12 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
 
     Rw = 1e-5 * [0.081733901510542   0.001723173871440  -0.002582723004641
                  0.001723173871440   0.105466716020954   0.000782168729699
-                 -0.002582723004641   0.000782168729699   0.061062268681170];
+                 -0.002582723004641   0.000782168729699   0.061062268681170]*10000;
     
     g0 = -[0.0171 -0.0403 -9.9719].';
     Ra =    1.0e-03 *[0.1356   -0.0005    0.0001
                       -0.0005    0.1441   -0.0066
-                      0.0001   -0.0066    0.2921];
+                      0.0001   -0.0066    0.2921]*1000;
 
     % Current filter state.
     x = [1; 0; 0 ;0];
@@ -52,7 +52,7 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
                 'mag', zeros(3, 0),...
                 'orient', zeros(4, 0));
     try
-    %% Create data link
+    % Create data link
     server = StreamSensorDataReader(3400);
     % Makes sure to resources are returned.
     sentinel = onCleanup(@() server.stop());
@@ -66,7 +66,7 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
     googleView = [];
     counter = 0;  % Used to throttle the displayed frame rate.
 
-    %% Filter loop
+    % Filter loop
     while server.status()  % Repeat while data is available
       % Get the next measurement set, assume all measurements
       % within the next 5 ms are concurrent (suitable for sampling
@@ -86,10 +86,13 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
       if ~any(isnan(acc))  % Acc measurements are available.
         [x, P] = mu_g(x, P, acc, Ra, g0);
       end
-      gyr = data(1, 5:7)';
-      if ~any(isnan(gyr))  % Gyro measurements are available.
-        [x,P] = tu_qw(x, 0, gyr, t-meas.t(end), Rw);
-      end
+      
+        gyr = data(1, 5:7)';
+        if ~any(isnan(gyr))  % Gyro measurements are available. 
+            [x,P] = tu_qw(x, P, gyr, t-t0-meas.t(end), Rw);
+        elseif ~size(meas.gyr,2) == 0 && ~any(isnan(meas.gyr(:, end)))
+            [x,P] = tu_qw(x, P, meas.gyr(:, end), t-t0-meas.t(end), Rw); 
+        end
 
       mag = data(1, 8:10)';
       if ~any(isnan(mag))  % Mag measurements are available.
@@ -126,10 +129,12 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
       meas.orient(:, end+1) = orientation;
     end
     catch e
-    fprintf(['Unsuccessful connecting to client!\n' ...
-      'Make sure to start streaming from the phone *after*'...
-             'running this function!']);
+    %fprintf(['Unsuccessful connecting to client!\n' ...
+      %'Make sure to start streaming from the phone *after*'...
+             %'running this function!']);
+     e
     end
+    
 end
 
 

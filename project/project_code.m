@@ -6,21 +6,30 @@ startup()
 %%
 clc; clear all; close all;
 [xhat, meas] = noa_filter();
-% euler_ang = quat2eul(xhat.x.', "XYZ");
-% figure
-% plot(euler_ang)
+
+euler_ang = quat2eul(xhat.x.', "XYZ");
+figure
+plot(euler_ang)
+hold on
+true_euler_ang = quat2eul(meas.orient.', "XYZ");
+plot(true_euler_ang)
+legend('x', 'y', 'z', 'x_{true}', 'y_{true}', 'z_{true}')
 %%
-%clc; close all; clear;
-clc; clf; clear
+clc; close all; clear;
 
 %load("meas_side.mat")
 %load("meas_flat.mat")
 load("meas_turning.mat")
 
 [xhat, meas] = noa_filter_no_bull_shit(meas);
+figure
 euler_ang = quat2eul(xhat.x.', "XYZ");
 plot(euler_ang)
-legend('x', 'y', 'z')
+hold on
+true_euler_ang = quat2eul(meas.orient.', "XYZ");
+plot(true_euler_ang)
+
+legend('x', 'y', 'z', 'x_{true}', 'y_{true}', 'z_{true}')
  
 %%
 clc; close all; clear;
