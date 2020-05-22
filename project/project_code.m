@@ -14,23 +14,7 @@ hold on
 true_euler_ang = quat2eul(meas.orient.', "XYZ");
 plot(true_euler_ang)
 legend('x', 'y', 'z', 'x_{true}', 'y_{true}', 'z_{true}')
-%%
-clc; close all; clear;
 
-%load("meas_side.mat")
-%load("meas_flat.mat")
-load("meas_turning.mat")
-
-[xhat, meas] = noa_filter_no_bull_shit(meas);
-figure
-euler_ang = quat2eul(xhat.x.', "XYZ");
-plot(euler_ang)
-hold on
-true_euler_ang = quat2eul(meas.orient.', "XYZ");
-plot(true_euler_ang)
-
-legend('x', 'y', 'z', 'x_{true}', 'y_{true}', 'z_{true}')
- 
 %%
 clc; close all; clear;
  
@@ -108,6 +92,10 @@ hold on
 plot([zeros(3,1), size(acc,2)*ones(3,1)].', [acc_mean acc_mean].')
 legend('acc(1)', 'acc(2)', 'acc(3)', 'acc_{\mu}(1)', 'acc_{\mu}(2)', 'acc_{\mu}(3)')
 
+
+
+m0 = [0 mean((mag(1,:).^2 + mag(2,:).^2).^0.5) mean(mag(3,:))]
+Rm = mag_cov
 
 
 %%

@@ -1,4 +1,4 @@
-function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
+function [xhat, meas] = SuvarnaFilter(calAcc, calGyr, calMag)
 % FILTERTEMPLATE  Filter template
 %
 % This is a template function for how to collect and filter data
@@ -20,50 +20,39 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
 %
 % Note that it is not necessary to provide inputs (calAcc, calGyr, calMag).
 
-    %% Setup necessary infrastructure
-    import('com.liu.sensordata.*');  % Used to receive data.
+  %% Setup necessary infrastructure
+  import('com.liu.sensordata.*');  % Used to receive data.
 
-    %% Filter settings
-    t0 = [];  % Initial time (initialize on first data received)
-    nx = 4;   % Assuming that you use q as state variable.
-    % Add your filter settings here.
+  %% Filter settings
+  t0 = [];  % Initial time (initialize on first data received)
+  nx = 4;   % Assuming that you use q as state variable.
+  % Add your filter settings here.
+  Ra = [0.0001   -0.0000   -0.0001;
+   -0.0000    0.0001    0.0002;
+   -0.0001    0.0002    0.0412];
+  Rg = 1.0e-05 *[0.0817    0.0017   -0.0026;
+                 0.0017    0.1054    0.0008;
+                -0.0026    0.0008    0.0610];
+  Rm = [1.5927   -0.1279    0.5139;
+        -0.1279    1.3952   -0.1204;
+        0.5139   -0.1204    3.3316];
+  g = [0 0 9.81]';
+  % Current filter state.
+  x = [1; 0; 0 ;0];
+  P = eye(nx, nx);
 
-    Rw = 1e-5 * [0.081733901510542   0.001723173871440  -0.002582723004641
-                 0.001723173871440   0.105466716020954   0.000782168729699
-                 -0.002582723004641   0.000782168729699   0.061062268681170]*10000;
-    
-    g0 = -[0.0171 -0.0403 -9.9719].';
-    Ra =    1.0e-03 *[0.1356   -0.0005    0.0001
-                      -0.0005    0.1441   -0.0066
-                      0.0001   -0.0066    0.2921]*1000;
-                  
-    m0 = [0   23.1169  -35.2728].';
-    Rm =[1.6583   -0.1538    0.0401
-         -0.1538    2.1136   -0.0003
-         0.0401   -0.0003    1.7076];
-    
-    alpha = 0.001;
-    L = alpha*norm(m0);
-    
-     
-    % Current filter state.
-    x = [1; 0; 0 ;0];
-    P = eye(nx, nx);
-
-    % Saved filter states.
-    xhat = struct('t', zeros(1, 0),...
+  % Saved filter states.
+  xhat = struct('t', zeros(1, 0),...
                 'x', zeros(nx, 0),...
-                'P', zeros(nx, nx, 0),...
-                 'L', L);
-    
+                'P', zeros(nx, nx, 0));
 
-    meas = struct('t', zeros(1, 0),...
+  meas = struct('t', zeros(1, 0),...
                 'acc', zeros(3, 0),...
                 'gyr', zeros(3, 0),...
                 'mag', zeros(3, 0),...
                 'orient', zeros(4, 0));
-    try
-    % Create data link
+  try
+    %% Create data link
     server = StreamSensorDataReader(3400);
     % Makes sure to resources are returned.
     sentinel = onCleanup(@() server.stop());
@@ -77,7 +66,7 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
     googleView = [];
     counter = 0;  % Used to throttle the displayed frame rate.
 
-    % Filter loop
+    %% Filter loop
     while server.status()  % Repeat while data is available
       % Get the next measurement set, assume all measurements
       % within the next 5 ms are concurrent (suitable for sampling
@@ -94,24 +83,19 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
       end
 
       acc = data(1, 2:4)';
-      acc_outlier = false;
       if ~any(isnan(acc))  % Acc measurements are available.
-        [x, P, acc_outlier] = mu_g(x, P, acc, Ra, g0);
+        % Do something
       end
-      
-        gyr = data(1, 5:7)';
-        if ~any(isnan(gyr))  % Gyro measurements are available. 
-            [x,P] = tu_qw(x, P, gyr, t-t0-meas.t(end), Rw);
-        elseif ~size(meas.gyr,2) == 0 && ~any(isnan(meas.gyr(:, end)))
-            [x,P] = tu_qw(x, P, meas.gyr(:, end), t-t0-meas.t(end), Rw); 
-        end
+      gyr = data(1, 5:7)';
+      if ~any(isnan(gyr))  % Gyro measurements are available.
+         [x, P] = tu_qw( x, P, gyr, 0.01, Rg);
+         [x,P] = mu_normalizeQ(x,P);
+      end
 
-        mag = data(1, 8:10)';
-        mag_outlier = false;
-        if ~any(isnan(mag))  % Mag measurements are available.
-            [x, P, L, mag_outlier] = mu_m(x, P, mag, m0, Rm, xhat.L(:, end), alpha);
-            xhat.L(:, end+1) = L;
-        end
+      mag = data(1, 8:10)';
+      if ~any(isnan(mag))  % Mag measurements are available.
+        % Do something
+      end
 
       orientation = data(1, 18:21)';  % Google's orientation estimate.
 
@@ -119,10 +103,6 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
       if rem(counter, 10) == 0
         setOrientation(ownView, x(1:4));
         title(ownView, 'OWN', 'FontSize', 16);
-        
-        ownView.setAccDist(acc_outlier)
-        ownView.setMagDist(mag_outlier)
-        
         if ~any(isnan(orientation))
           if isempty(googleView)
             subplot(1, 2, 2);
@@ -146,16 +126,9 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
       meas.mag(:, end+1) = mag;
       meas.orient(:, end+1) = orientation;
     end
-    catch e
-    %fprintf(['Unsuccessful connecting to client!\n' ...
-      %'Make sure to start streaming from the phone *after*'...
-             %'running this function!']);
-     e
-    end
-    
+  catch e
+    fprintf(['Unsuccessful connecting to client!\n' ...
+      'Make sure to start streaming from the phone *after*'...
+             'running this function!']);
+  end
 end
-
-
-
-
-

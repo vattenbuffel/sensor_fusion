@@ -1,6 +1,8 @@
-function [x,P, theta] = tu_qw(x, P, omega, T, Rw)
+function [x,P] = tu_qw(x, P, omega, T, Rw)
     
-    F = (eye(size(x)) + T/2*Somega(omega));
+    F = (eye(size(x,1)) + T/2*Somega(omega));
+        
+    
     x = F*x;
     %rad2deg(q2euler(x))
     
@@ -22,6 +24,7 @@ function [x,P, theta] = tu_qw(x, P, omega, T, Rw)
             (T*q4)/2,  (T*q1)/2, -(T*q2)/2
             -(T*q3)/2,  (T*q2)/2,  (T*q1)/2];
      
-     P = F*P*F.' + dgv*Rw*dgv.' + dgq*P*dgq.'; 
+    
+    P = F*P*F.' + dgv*Rw*dgv.' + dgq*P*dgq.'; 
     [x, P] = mu_normalizeQ(x, P);
 end
